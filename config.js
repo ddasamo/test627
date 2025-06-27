@@ -8,7 +8,7 @@ const CONFIG = {
     SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpeXBjcWZ6ZHRtY3Bkcm14emx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjQyNzEsImV4cCI6MjA2NjYwMDI3MX0.BpG75MTBGaWXTz5fP_-4d_xzWfPdIe_8579cRfNUli0', // 예: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
     
     // 데모 모드 설정 (개발/테스트용)
-    DEMO_MODE: true, // true: localStorage 사용, false: Supabase 사용
+    DEMO_MODE: false, // true: localStorage 사용, false: Supabase 사용
     
     // 앱 설정
     APP_SETTINGS: {
