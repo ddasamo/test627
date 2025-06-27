@@ -35,7 +35,7 @@ async function checkAuthState() {
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
-                showMainApp();
+                await showMainApp();
                 await loadUserProgress();
             }
         } else {
@@ -43,7 +43,7 @@ async function checkAuthState() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 currentUser = user;
-                showMainApp();
+                await showMainApp();
                 await loadUserProgress();
             }
         }
@@ -116,9 +116,9 @@ async function handleLogin(e) {
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             showSuccessMessage(CONFIG.MESSAGES.LOGIN_SUCCESS);
             
-            setTimeout(() => {
-                showMainApp();
-                loadUserProgress();
+            setTimeout(async () => {
+                await showMainApp();
+                await loadUserProgress();
             }, 1000);
         } else {
             // Supabase 로그인
@@ -130,7 +130,7 @@ async function handleLogin(e) {
             if (error) throw error;
             
             currentUser = data.user;
-            showMainApp();
+            await showMainApp();
             await loadUserProgress();
         }
 
@@ -180,13 +180,20 @@ async function handleSignup(e) {
 
             if (error) throw error;
             
-            // 사용자 프로필 저장
-            await supabase.from(CONFIG.DB_TABLES.PROFILES).insert({
-                id: data.user.id,
-                name: name,
-                class: className,
-                email: email
-            });
+            // 사용자 프로필 저장 (회원가입 성공 후)
+            if (data.user) {
+                const { error: profileError } = await supabase.from(CONFIG.DB_TABLES.PROFILES).insert({
+                    id: data.user.id,
+                    name: name,
+                    class: className,
+                    email: email
+                });
+
+                if (profileError) {
+                    console.error('프로필 저장 오류:', profileError);
+                    // 프로필 저장 실패해도 회원가입은 성공한 상태
+                }
+            }
 
             showSuccessMessage(CONFIG.MESSAGES.SIGNUP_SUCCESS);
         }
@@ -221,13 +228,43 @@ async function logout() {
 // ===== UI 전환 함수 =====
 
 // 메인 앱 표시
-function showMainApp() {
+async function showMainApp() {
     document.getElementById('authContainer').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     
     // 사용자 정보 표시
-    document.getElementById('userName').textContent = currentUser.name + '님';
-    document.getElementById('userClass').textContent = currentUser.class || currentUser.user_metadata?.class || '학급 정보 없음';
+    let userName = '사용자';
+    let userClass = '학급 정보 없음';
+    
+    if (CONFIG.DEMO_MODE) {
+        userName = currentUser.name || currentUser.email?.split('@')[0] || '사용자';
+        userClass = currentUser.class || '학급 정보 없음';
+    } else {
+        // Supabase에서 프로필 정보 가져오기
+        try {
+            const { data: profile, error } = await supabase
+                .from(CONFIG.DB_TABLES.PROFILES)
+                .select('name, class')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (profile && !error) {
+                userName = profile.name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || '사용자';
+                userClass = profile.class || currentUser.user_metadata?.class || '학급 정보 없음';
+            } else {
+                // 프로필이 없으면 user_metadata에서 가져오기
+                userName = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || '사용자';
+                userClass = currentUser.user_metadata?.class || '학급 정보 없음';
+            }
+        } catch (error) {
+            console.error('프로필 로드 오류:', error);
+            userName = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || '사용자';
+            userClass = currentUser.user_metadata?.class || '학급 정보 없음';
+        }
+    }
+    
+    document.getElementById('userName').textContent = userName + '님';
+    document.getElementById('userClass').textContent = userClass;
 }
 
 // 인증 컨테이너 표시
@@ -298,7 +335,8 @@ async function saveProgress() {
         } else {
             // Supabase에 저장
             if (currentInquiryId) {
-                await supabase
+                console.log('기존 탐구 데이터 업데이트 중...', currentInquiryId);
+                const { data, error } = await supabase
                     .from(CONFIG.DB_TABLES.INQUIRIES)
                     .update({
                         current_stage: currentStage,
@@ -308,8 +346,17 @@ async function saveProgress() {
                         reflection_data: reflectionData,
                         updated_at: new Date().toISOString()
                     })
-                    .eq('id', currentInquiryId);
+                    .eq('id', currentInquiryId)
+                    .select();
+                
+                if (error) {
+                    console.error('탐구 데이터 업데이트 오류:', error);
+                    throw error;
+                } else {
+                    console.log('탐구 데이터 업데이트 성공:', data);
+                }
             } else {
+                console.log('새 탐구 데이터 생성 중...', currentUser.id);
                 const { data, error } = await supabase
                     .from(CONFIG.DB_TABLES.INQUIRIES)
                     .insert({
@@ -324,7 +371,13 @@ async function saveProgress() {
                     .select()
                     .single();
                 
-                if (data) currentInquiryId = data.id;
+                if (error) {
+                    console.error('탐구 데이터 생성 오류:', error);
+                    throw error;
+                } else {
+                    console.log('탐구 데이터 생성 성공:', data);
+                    if (data) currentInquiryId = data.id;
+                }
             }
         }
 
