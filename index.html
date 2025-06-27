@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>의도기반 탐구학습 시스템</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 로그인/회원가입 화면 -->
+    <div class="login-container" id="authContainer">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>🎯</h1>
+                <h2>의도기반 탐구학습</h2>
+                <p>탐구의 여정을 시작해보세요!</p>
+            </div>
+
+            <!-- 로그인 폼 -->
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">이메일</label>
+                    <input type="email" id="loginEmail" class="form-input" placeholder="이메일을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">비밀번호</label>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <button type="submit" class="btn-primary">로그인</button>
+            </form>
+
+            <!-- 회원가입 폼 -->
+            <form id="signupForm" style="display: none;">
+                <div class="form-group">
+                    <label for="signupName">이름</label>
+                    <input type="text" id="signupName" class="form-input" placeholder="이름을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">이메일</label>
+                    <input type="email" id="signupEmail" class="form-input" placeholder="이메일을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">비밀번호</label>
+                    <input type="password" id="signupPassword" class="form-input" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupClass">학급</label>
+                    <input type="text" id="signupClass" class="form-input" placeholder="예: 3학년 2반" required>
+                </div>
+                <button type="submit" class="btn-primary">회원가입</button>
+            </form>
+
+            <div class="switch-form">
+                <span id="switchText">계정이 없으신가요?</span>
+                <a href="#" id="switchLink">회원가입</a>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+            <div class="loading" id="loading">로딩 중...</div>
+        </div>
+    </div>
+
+    <!-- 메인 앱 화면 -->
+    <div class="main-app" id="mainApp">
+        <div class="container">
+            <div class="header">
+                <div class="header-left">
+                    <h1>🎯 의도기반 탐구학습</h1>
+                    <p>당신의 탐구 의도를 끝까지 지켜나가세요!</p>
+                </div>
+                <div class="user-info">
+                    <div class="user-name" id="userName">사용자님</div>
+                    <div class="user-class" id="userClass">학급 정보</div>
+                    <button class="logout-btn" onclick="logout()">로그아웃</button>
+                </div>
+            </div>
+
+            <div class="score-board">
+                <div class="score-container">
+                    <div>
+                        <div class="score-display" id="totalScore">0점</div>
+                        <div id="levelDisplay">⭐⭐⭐⭐☆ 탐구 숙련자</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.2em; margin-bottom: 10px;">진행률</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                        </div>
+                        <div id="progressText">0%</div>
+                    </div>
+                </div>
+                
+                <div class="intent-tracker">
+                    <h3>🎯 초기 탐구 의도</h3>
+                    <p id="initialIntent">아직 설정되지 않았습니다.</p>
+                    <div class="intent-match">
+                        <div class="match-indicator" id="matchIndicator"></div>
+                        <span id="matchText">의도 일치도: 0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stages-container">
+                <!-- 관계맺기 단계 -->
+                <div class="stage active" id="stage1">
+                    <div class="stage-header">
+                        <div class="stage-title">1단계: 관계맺기 (Engaging)</div>
+                        <div class="stage-score" id="score1">0/10점</div>
+                    </div>
+                    <p style="margin-bottom: 15px;">💭 무엇이 궁금한가요? 탐구하고 싶은 주제나 문제를 자유롭게 적어보세요.</p>
+                    <textarea class="input-area" id="input1" placeholder="예: 우리 학교 학생들이 점심시간에 도서관보다 운동장을 더 선호하는 이유가 궁금해요..."></textarea>
+                    <button class="btn" onclick="submitStage(1)">다음 단계로</button>
+                </div>
+
+                <!-- 집중하기 단계 -->
+                <div class="stage" id="stage2">
+                    <div class="stage-header">
+                        <div class="stage-title">2단계: 집중하기 (Focusing)</div>
+                        <div class="stage-score" id="score2">0/15점</div>
+                    </div>
+                    <p style="margin-bottom: 15px;">🎯 탐구 질문을 구체적으로 만들어보세요. 핵심 개념을 명확히 해주세요.</p>
+                    <textarea class="input-area" id="input2" placeholder="구체적인 탐구 질문을 작성해주세요..."></textarea>
+                    <button class="btn" onclick="submitStage(2)">다음 단계로</button>
+                </div>
+
+                <!-- 조사하기 단계 -->
+                <div class="stage" id="stage3">
+                    <div class="stage-header">
+                        <div class="stage-title">3단계: 조사하기 (Exploring)</div>
+                        <div class="stage-score" id="score3">0/20점</div>
+                    </div>
+                    <p style="margin-bottom: 15px;">🔍 어떤 방법으로 조사할 계획인가요? 수집할 자료나 방법을 설명해주세요.</p>
+                    <textarea class="input-area" id="input3" placeholder="조사 방법과 계획을 자세히 적어주세요..."></textarea>
+                    <button class="btn" onclick="submitStage(3)">다음 단계로</button>
+                </div>
+
+                <!-- 조직 및 정리하기 단계 -->
+                <div class="stage" id="stage4">
+                    <div class="stage-header">
+                        <div class="stage-title">4단계: 조직 및 정리하기 (Organizing)</div>
+                        <div class="stage-score" id="score4">0/15점</div>
+                    </div>
+                    <p style="margin-bottom: 15px;">📊 수집한 정보를 어떻게 분류하고 정리했나요? 발견한 패턴이 있다면 설명해주세요.</p>
+                    <textarea class="input-area" id="input4" placeholder="정보 정리 결과와 발견한 패턴을 적어주세요..."></textarea>
+                    <button class="btn" onclick="submitStage(4)">다음 단계로</button>
+                </div>
+
+                <!-- 일반화하기 단계 -->
+                <div class="stage" id="stage5">
+                    <div class="stage-header">
+                        <div class="stage-title">5단계: 일반화하기 (Generalizing)</div>
+                        <div class="stage-score" id="score5">0/10점</div>
+                    </div>
+                    <p style="margin-bottom: 15px;">💡 탐구 결과에서 어떤 일반적인 원리나 법칙을 발견했나요?</p>
+                    <textarea class="input-area" id="input5" placeholder="일반화된 결론이나 원리를 적어주세요..."></textarea>
+                    <button class="btn" onclick="submitStage(5)">다음 단계로</button>
+                </div>
+
+                <!-- 전이하기 단계 -->
+                <div class="stage" id="stage6">
+                    <div class="stage-header">
+                        <div class="stage-title">6단계: 전이하기 (Transferring)</div>
+                        <div class="stage-score" id="score6">0/20점</div>
+                    </div>
+                    <p style="margin-bottom: 15px;">🌟 학습한 내용을 다른 상황에 어떻게 적용할 수 있을까요?</p>
+                    <textarea class="input-area" id="input6" placeholder="다른 상황에의 적용 방안을 적어주세요..."></textarea>
+                    <button class="btn" onclick="submitStage(6)">탐구 완료</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 성찰 팝업 -->
+    <div class="reflection-popup" id="reflectionPopup">
+        <div class="reflection-content">
+            <h2>🤔 성찰 시간</h2>
+            <div id="reflectionQuestion"></div>
+            <textarea class="input-area" id="reflectionAnswer" placeholder="성찰 질문에 대한 답변을 적어주세요..."></textarea>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="submitReflection()">답변 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 

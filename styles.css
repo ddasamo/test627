@@ -1,0 +1,524 @@
+/* 의도기반 탐구학습 시스템 - 스타일시트 */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1024px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+/* ===== 로그인 화면 스타일 ===== */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-box {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-header h1 {
+    color: #4CAF50;
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-input {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+.btn-primary {
+    width: 100%;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 10px;
+}
+
+.btn-primary:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    width: 100%;
+    background: transparent;
+    color: #4CAF50;
+    border: 2px solid #4CAF50;
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: #4CAF50;
+    color: white;
+}
+
+.switch-form {
+    text-align: center;
+    margin-top: 20px;
+    color: #666;
+}
+
+.switch-form a {
+    color: #4CAF50;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.switch-form a:hover {
+    text-decoration: underline;
+}
+
+/* ===== 메인 앱 스타일 ===== */
+.main-app {
+    display: none;
+}
+
+.header {
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    padding: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.user-info {
+    text-align: right;
+}
+
+.user-name {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.logout-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid white;
+    padding: 8px 15px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* ===== 점수판 스타일 ===== */
+.score-board {
+    background: #f8f9fa;
+    padding: 25px;
+    border-bottom: 2px solid #eee;
+}
+
+.score-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.score-display {
+    font-size: 3em;
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 15px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+/* ===== 의도 추적기 스타일 ===== */
+.intent-tracker {
+    background: #fff3e0;
+    border: 2px solid #ff9800;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.intent-match {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.match-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4CAF50;
+}
+
+.match-indicator.low {
+    background: #f44336;
+}
+
+.match-indicator.medium {
+    background: #ff9800;
+}
+
+/* ===== 탐구 단계 스타일 ===== */
+.stages-container {
+    padding: 30px;
+}
+
+.stage {
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 15px;
+    margin: 20px 0;
+    padding: 25px;
+    transition: all 0.3s ease;
+}
+
+.stage.active {
+    border-color: #4CAF50;
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.2);
+}
+
+.stage.completed {
+    background: #f0f8f0;
+    border-color: #4CAF50;
+}
+
+.stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.stage-title {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #333;
+}
+
+.stage-score {
+    background: #4CAF50;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.input-area {
+    width: 100%;
+    min-height: 120px;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+}
+
+.input-area:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+.btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 10px 5px;
+}
+
+.btn:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* ===== 성찰 팝업 스타일 ===== */
+.reflection-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.reflection-content {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* ===== 메시지 스타일 ===== */
+.loading {
+    display: none;
+    text-align: center;
+    padding: 20px;
+}
+
+.error-message {
+    background: #ffebee;
+    color: #c62828;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 10px 0;
+    display: none;
+}
+
+.success-message {
+    background: #e8f5e8;
+    color: #2e7d32;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 10px 0;
+    display: none;
+}
+
+/* ===== 반응형 디자인 ===== */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .header-left h1 {
+        font-size: 2em;
+    }
+    
+    .score-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .score-display {
+        font-size: 2.5em;
+    }
+    
+    .stage-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .stage-title {
+        font-size: 1.3em;
+        text-align: center;
+    }
+    
+    .stages-container {
+        padding: 15px;
+    }
+    
+    .stage {
+        padding: 20px;
+        margin: 15px 0;
+    }
+    
+    .login-box {
+        padding: 30px;
+        margin: 10px;
+    }
+    
+    .reflection-content {
+        padding: 30px;
+        margin: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-left h1 {
+        font-size: 1.8em;
+    }
+    
+    .score-display {
+        font-size: 2em;
+    }
+    
+    .stage-title {
+        font-size: 1.2em;
+    }
+    
+    .btn {
+        padding: 12px 25px;
+        font-size: 14px;
+    }
+    
+    .input-area {
+        min-height: 100px;
+        font-size: 14px;
+    }
+}
+
+/* ===== 터치 최적화 ===== */
+@media (hover: none) and (pointer: coarse) {
+    .btn, .btn-primary, .btn-secondary, .logout-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    .form-input, .input-area {
+        min-height: 44px;
+    }
+    
+    .stage {
+        margin: 15px 0;
+    }
+}
+
+/* ===== 애니메이션 ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stage.active {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.reflection-popup {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* ===== 접근성 개선 ===== */
+.btn:focus, .btn-primary:focus, .btn-secondary:focus {
+    outline: 3px solid #4CAF50;
+    outline-offset: 2px;
+}
+
+.form-input:focus, .input-area:focus {
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+/* ===== 다크 모드 지원 ===== */
+@media (prefers-color-scheme: dark) {
+    .container {
+        background: #2d2d2d;
+        color: #fff;
+    }
+    
+    .stage {
+        background: #3d3d3d;
+        border-color: #555;
+    }
+    
+    .stage.completed {
+        background: #2d4a2d;
+    }
+    
+    .score-board {
+        background: #333;
+    }
+    
+    .reflection-content {
+        background: #2d2d2d;
+        color: #fff;
+    }
+    
+    .login-box {
+        background: #2d2d2d;
+        color: #fff;
+    }
+} 
