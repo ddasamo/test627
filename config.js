@@ -10,6 +10,61 @@ const CONFIG = {
     // 데모 모드 설정 (개발/테스트용)
     DEMO_MODE: false, // true: localStorage 사용, false: Supabase 사용
     
+    // ===== AI 탐구 코치 설정 =====
+    AI_COACH: {
+        // Google Gemini API 설정
+        GEMINI_API_KEY: 'AIzaSyAdcD_Q6oGohDQ7HfToeWrd6n4R-kwUKGQ',
+        MODEL: 'gemini-1.5-flash',
+        MAX_TOKENS: 500,
+        TEMPERATURE: 0.7,
+        
+        // AI 코치 활성화 여부
+        ENABLED: true,
+        
+        // 피드백 기준 점수
+        FEEDBACK_THRESHOLDS: {
+            HIGH_MATCH: 80,     // 높은 일치도 - 긍정적 피드백
+            MEDIUM_MATCH: 60,   // 보통 일치도 - 격려 + 개선 제안
+            LOW_MATCH: 40       // 낮은 일치도 - 방향 수정 가이드
+        },
+        
+        // AI 프롬프트 템플릿
+        PROMPTS: {
+            INTENT_ANALYSIS: `
+당신은 학생들의 탐구학습을 돕는 AI 코치입니다. 
+학생의 초기 탐구 의도와 현재 단계의 입력 내용을 비교하여 일치도를 0-100점으로 평가하고, 
+적절한 피드백을 제공해주세요.
+
+초기 의도: "{initialIntent}"
+현재 단계: {stage}단계 - {stageName}
+학생 입력: "{userInput}"
+
+다음 JSON 형식으로 응답해주세요:
+{
+  "matchScore": 숫자 (0-100),
+  "feedback": "학생에게 제공할 피드백 메시지",
+  "suggestions": ["구체적인 개선 제안1", "개선 제안2"],
+  "encouragement": "격려 메시지"
+}
+`,
+            
+            REFLECTION_GUIDE: `
+학생이 성찰 질문에 답변한 내용을 바탕으로 더 깊이 있는 성찰을 유도하는 후속 질문을 생성해주세요.
+
+초기 의도: "{initialIntent}"
+성찰 질문: "{reflectionQuestion}"
+학생 답변: "{studentAnswer}"
+
+다음 JSON 형식으로 응답해주세요:
+{
+  "followUpQuestions": ["후속 질문1", "후속 질문2"],
+  "insight": "학생의 답변에서 발견한 통찰",
+  "guidance": "성찰 방향 가이드"
+}
+`
+        }
+    },
+    
     // 앱 설정
     APP_SETTINGS: {
         // 탐구 단계별 최대 점수

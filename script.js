@@ -8,12 +8,20 @@ let stageScores = [0, 0, 0, 0, 0, 0, 0];
 let initialIntent = "";
 let reflectionData = [];
 let currentInquiryId = null;
+let aiCoachEnabled = false; // AI 코치 활성화 상태
+
+// ===== AI 탐구 코치 관련 변수 =====
+let currentAIFeedback = null;
+let stageNames = ['', '관계맺기', '집중하기', '조사하기', '조직및정리하기', '일반화하기', '전이하기'];
 
 // ===== 초기화 =====
 document.addEventListener('DOMContentLoaded', async () => {
     // 설정 초기화
     initializeConfig();
     validateConfig();
+    
+    // AI 코치 초기화
+    initializeAICoach();
     
     // 인증 상태 확인
     await checkAuthState();
@@ -402,31 +410,56 @@ async function submitStage(stage) {
         return;
     }
 
-    // 첫 번째 단계에서 초기 의도 설정
-    if (stage === 1) {
-        initialIntent = input;
-        document.getElementById('initialIntent').textContent = input;
-    }
+    showLoading();
 
-    // 의도 일치도 계산
-    const intentMatch = calculateIntentMatch(input, stage);
-    
-    // 점수 계산
-    const maxScore = CONFIG.APP_SETTINGS.STAGE_MAX_SCORES[stage];
-    const earnedScore = Math.round(maxScore * (intentMatch / 100));
-    stageScores[stage] = earnedScore;
-    
-    // UI 업데이트
-    updateStageScore(stage, earnedScore, maxScore);
-    updateTotalScore();
-    updateProgress();
-    updateIntentMatch(intentMatch);
-    
-    // 진행 상황 저장
-    await saveProgress();
-    
-    // 성찰 팝업 표시
-    showReflectionPopup(stage);
+    try {
+        // 첫 번째 단계에서 초기 의도 설정
+        if (stage === 1) {
+            initialIntent = input;
+            document.getElementById('initialIntent').textContent = input;
+        }
+
+        // AI 피드백 분석 (비동기)
+        let aiFeedback = null;
+        if (aiCoachEnabled && initialIntent) {
+            aiFeedback = await analyzeIntentMatch(input, stage);
+        }
+        
+        // 의도 일치도 계산 (AI 피드백이 있으면 AI 점수 사용, 없으면 기본 계산)
+        const intentMatch = aiFeedback ? aiFeedback.matchScore : calculateIntentMatch(input, stage);
+        
+        // 점수 계산
+        const maxScore = CONFIG.APP_SETTINGS.STAGE_MAX_SCORES[stage];
+        const earnedScore = Math.round(maxScore * (intentMatch / 100));
+        stageScores[stage] = earnedScore;
+        
+        // UI 업데이트
+        updateStageScore(stage, earnedScore, maxScore);
+        updateTotalScore();
+        updateProgress();
+        updateIntentMatch(intentMatch);
+        
+        // AI 피드백 표시
+        if (aiFeedback) {
+            displayAIFeedback(aiFeedback, stage);
+        }
+        
+        // 진행 상황 저장
+        await saveProgress();
+        
+        // 성찰 팝업 표시 (AI 피드백 후 약간의 지연)
+        setTimeout(() => {
+            showReflectionPopup(stage);
+        }, aiFeedback ? 2000 : 0);
+        
+        showSuccessMessage(`${stage}단계가 완료되었습니다!`);
+
+    } catch (error) {
+        console.error('단계 제출 오류:', error);
+        showErrorMessage('단계 제출 중 오류가 발생했습니다.');
+    } finally {
+        hideLoading();
+    }
 }
 
 // 성찰 제출
@@ -671,4 +704,349 @@ setInterval(async () => {
     if (currentUser && currentStage > 1) {
         await saveProgress();
     }
-}, CONFIG.APP_SETTINGS.AUTO_SAVE_INTERVAL); 
+}, CONFIG.APP_SETTINGS.AUTO_SAVE_INTERVAL);
+
+// ===== AI 탐구 코치 함수 =====
+
+// AI 코치 초기화
+function initializeAICoach() {
+    const hasValidKey = CONFIG.AI_COACH.GEMINI_API_KEY && 
+                       CONFIG.AI_COACH.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY' && 
+                       CONFIG.AI_COACH.GEMINI_API_KEY.startsWith('AIza');
+    
+    aiCoachEnabled = CONFIG.AI_COACH.ENABLED && hasValidKey;
+    
+    if (aiCoachEnabled) {
+        console.log('AI 탐구 코치가 활성화되었습니다.');
+        console.log('API 키 확인:', CONFIG.AI_COACH.GEMINI_API_KEY.substring(0, 10) + '...');
+        console.log('사용 모델:', CONFIG.AI_COACH.MODEL);
+        showAICoachStatus(true);
+    } else {
+        console.log('AI 탐구 코치가 비활성화되었습니다.');
+        console.log('설정 확인:', {
+            enabled: CONFIG.AI_COACH.ENABLED,
+            hasKey: !!CONFIG.AI_COACH.GEMINI_API_KEY,
+            keyValid: hasValidKey
+        });
+        showAICoachStatus(false);
+    }
+}
+
+// AI 코치 상태 표시
+function showAICoachStatus(enabled) {
+    const statusElement = document.getElementById('aiCoachStatus');
+    if (statusElement) {
+        statusElement.textContent = enabled ? '🤖 AI 코치 활성화' : '🤖 AI 코치 비활성화';
+        statusElement.className = enabled ? 'ai-coach-enabled' : 'ai-coach-disabled';
+    }
+}
+
+// Google Gemini API 호출
+async function callGeminiAPI(prompt) {
+    if (!aiCoachEnabled) {
+        console.log('AI 코치가 비활성화되어 있습니다.');
+        return null;
+    }
+
+    try {
+        const systemInstruction = '당신은 학생들의 탐구학습을 돕는 친근하고 격려적인 AI 코치입니다. 학생들의 수준에 맞는 쉬운 언어를 사용하고, 항상 긍정적이고 건설적인 피드백을 제공합니다.';
+        const fullPrompt = `${systemInstruction}\n\n${prompt}`;
+        
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.AI_COACH.MODEL}:generateContent?key=${CONFIG.AI_COACH.GEMINI_API_KEY}`;
+        console.log('API 호출 URL:', apiUrl);
+        console.log('사용 모델:', CONFIG.AI_COACH.MODEL);
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: fullPrompt
+                    }]
+                }],
+                generationConfig: {
+                    temperature: CONFIG.AI_COACH.TEMPERATURE,
+                    maxOutputTokens: CONFIG.AI_COACH.MAX_TOKENS,
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Gemini API 오류: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+
+        const data = await response.json();
+        console.log('Gemini API 응답:', data);
+        
+        // 응답 구조 검증
+        if (data.candidates && Array.isArray(data.candidates) && data.candidates.length > 0) {
+            const candidate = data.candidates[0];
+            if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts) && candidate.content.parts.length > 0) {
+                return candidate.content.parts[0].text;
+            }
+        }
+        
+        // 오류 응답 처리
+        if (data.error) {
+            throw new Error(`Gemini API 오류: ${data.error.message}`);
+        }
+        
+        console.error('예상하지 못한 응답 구조:', data);
+        throw new Error('Gemini API 응답 형식이 올바르지 않습니다.');
+    } catch (error) {
+        console.error('Gemini API 호출 오류:', error);
+        return null;
+    }
+}
+
+// 의도 일치도 분석 및 피드백 생성
+async function analyzeIntentMatch(userInput, stage) {
+    if (!aiCoachEnabled || !initialIntent || !userInput) {
+        console.log('AI 분석 조건 미충족:', { aiCoachEnabled, initialIntent: !!initialIntent, userInput: !!userInput });
+        return null;
+    }
+
+    console.log('AI 분석 시작:', { stage, stageName: stageNames[stage], userInput: userInput.substring(0, 50) + '...' });
+
+    const prompt = CONFIG.AI_COACH.PROMPTS.INTENT_ANALYSIS
+        .replace('{initialIntent}', initialIntent)
+        .replace('{stage}', stage)
+        .replace('{stageName}', stageNames[stage])
+        .replace('{userInput}', userInput);
+
+    console.log('생성된 프롬프트:', prompt);
+
+    try {
+        const response = await callGeminiAPI(prompt);
+        if (response) {
+            // JSON 응답 파싱 시도
+            let feedback;
+            try {
+                // 응답에서 JSON 부분만 추출 (```json 등의 마크다운 제거)
+                const jsonMatch = response.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    feedback = JSON.parse(jsonMatch[0]);
+                } else {
+                    feedback = JSON.parse(response);
+                }
+            } catch (parseError) {
+                console.error('JSON 파싱 오류:', parseError);
+                console.log('원본 응답:', response);
+                // JSON 파싱 실패 시 기본 피드백 사용
+                return generateBasicFeedback(userInput, stage);
+            }
+            
+            currentAIFeedback = feedback;
+            return feedback;
+        }
+    } catch (error) {
+        console.error('AI 피드백 분석 오류:', error);
+        // 기본 피드백 제공
+        return generateBasicFeedback(userInput, stage);
+    }
+
+    return null;
+}
+
+// 기본 피드백 생성 (AI 실패 시 대체)
+function generateBasicFeedback(userInput, stage) {
+    const basicMatch = calculateIntentMatch(userInput, stage);
+    
+    let feedback = '';
+    let suggestions = [];
+    let encouragement = '';
+
+    if (basicMatch >= CONFIG.AI_COACH.FEEDBACK_THRESHOLDS.HIGH_MATCH) {
+        feedback = '훌륭해요! 초기 의도와 잘 연결된 탐구를 진행하고 있습니다.';
+        encouragement = '이 방향으로 계속 진행해보세요! 🎉';
+        suggestions = ['현재 방향을 유지하며 더 구체적으로 발전시켜보세요.'];
+    } else if (basicMatch >= CONFIG.AI_COACH.FEEDBACK_THRESHOLDS.MEDIUM_MATCH) {
+        feedback = '좋은 시작이에요! 초기 의도와 어느 정도 연결되어 있습니다.';
+        encouragement = '조금 더 초기 의도를 고려해보면 더 좋을 것 같아요! 💪';
+        suggestions = ['초기 의도를 다시 한 번 확인해보세요.', '현재 내용을 초기 의도와 더 연결해보세요.'];
+    } else {
+        feedback = '초기 의도와 조금 다른 방향으로 가고 있는 것 같아요.';
+        encouragement = '괜찮아요! 다시 초기 의도를 생각해보며 방향을 조정해보세요! 🌟';
+        suggestions = ['초기 의도를 다시 읽어보세요.', '현재 단계가 초기 의도와 어떻게 연결되는지 생각해보세요.'];
+    }
+
+    return {
+        matchScore: basicMatch,
+        feedback: feedback,
+        suggestions: suggestions,
+        encouragement: encouragement
+    };
+}
+
+// AI 피드백 표시
+function displayAIFeedback(feedback, stage) {
+    if (!feedback) return;
+
+    const feedbackContainer = document.getElementById('aiFeedbackContainer');
+    if (!feedbackContainer) return;
+
+    // 피드백 UI 생성
+    const feedbackHTML = `
+        <div class="ai-feedback-card">
+            <div class="ai-feedback-header">
+                <span class="ai-coach-icon">🤖</span>
+                <h4>AI 탐구 코치</h4>
+                <span class="match-score ${getMatchScoreClass(feedback.matchScore)}">
+                    일치도: ${feedback.matchScore}점
+                </span>
+            </div>
+            <div class="ai-feedback-content">
+                <div class="feedback-message">
+                    <p>${feedback.feedback}</p>
+                </div>
+                <div class="encouragement-message">
+                    <p><strong>${feedback.encouragement}</strong></p>
+                </div>
+                ${feedback.suggestions && feedback.suggestions.length > 0 ? `
+                    <div class="suggestions">
+                        <h5>💡 개선 제안:</h5>
+                        <ul>
+                            ${feedback.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="ai-feedback-actions">
+                <button onclick="closeAIFeedback()" class="btn-secondary">확인</button>
+                <button onclick="showDetailedGuidance(${stage})" class="btn-primary">자세한 가이드</button>
+            </div>
+        </div>
+    `;
+
+    feedbackContainer.innerHTML = feedbackHTML;
+    feedbackContainer.style.display = 'block';
+    
+    // 애니메이션 효과
+    setTimeout(() => {
+        feedbackContainer.classList.add('show');
+    }, 100);
+}
+
+// 일치도 점수에 따른 CSS 클래스 반환
+function getMatchScoreClass(score) {
+    if (score >= CONFIG.AI_COACH.FEEDBACK_THRESHOLDS.HIGH_MATCH) {
+        return 'high-match';
+    } else if (score >= CONFIG.AI_COACH.FEEDBACK_THRESHOLDS.MEDIUM_MATCH) {
+        return 'medium-match';
+    } else {
+        return 'low-match';
+    }
+}
+
+// AI 피드백 닫기
+function closeAIFeedback() {
+    const feedbackContainer = document.getElementById('aiFeedbackContainer');
+    if (feedbackContainer) {
+        feedbackContainer.classList.remove('show');
+        setTimeout(() => {
+            feedbackContainer.style.display = 'none';
+        }, 300);
+    }
+}
+
+// 자세한 가이드 표시
+function showDetailedGuidance(stage) {
+    const guidanceText = getDetailedGuidanceText(stage);
+    
+    const modal = document.createElement('div');
+    modal.className = 'guidance-modal';
+    modal.innerHTML = `
+        <div class="guidance-content">
+            <div class="guidance-header">
+                <h3>${stage}단계 - ${stageNames[stage]} 가이드</h3>
+                <button onclick="closeGuidanceModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="guidance-body">
+                ${guidanceText}
+            </div>
+            <div class="guidance-footer">
+                <button onclick="closeGuidanceModal()" class="btn-primary">확인</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 100);
+}
+
+// 단계별 상세 가이드 텍스트
+function getDetailedGuidanceText(stage) {
+    const guides = {
+        1: `
+            <h4>🤝 관계맺기 단계</h4>
+            <p>이 단계에서는 탐구하고 싶은 문제나 현상을 찾아보세요.</p>
+            <ul>
+                <li>주변에서 궁금한 것들을 생각해보세요</li>
+                <li>일상생활에서 경험한 문제나 현상을 떠올려보세요</li>
+                <li>초기 의도와 연결된 구체적인 문제를 제시해보세요</li>
+            </ul>
+        `,
+        2: `
+            <h4>🎯 집중하기 단계</h4>
+            <p>탐구하고 싶은 질문을 구체적으로 만들어보세요.</p>
+            <ul>
+                <li>1단계에서 찾은 문제를 바탕으로 탐구 질문을 만드세요</li>
+                <li>질문이 초기 의도와 연결되어 있는지 확인해보세요</li>
+                <li>답을 찾을 수 있는 구체적인 질문으로 만들어보세요</li>
+            </ul>
+        `,
+        3: `
+            <h4>🔍 조사하기 단계</h4>
+            <p>탐구 질문에 답하기 위한 자료를 수집해보세요.</p>
+            <ul>
+                <li>다양한 방법으로 정보를 수집해보세요</li>
+                <li>수집한 자료가 탐구 질문과 관련이 있는지 확인해보세요</li>
+                <li>초기 의도와 연결된 자료인지 생각해보세요</li>
+            </ul>
+        `,
+        4: `
+            <h4>📊 조직및정리하기 단계</h4>
+            <p>수집한 자료를 정리하고 분석해보세요.</p>
+            <ul>
+                <li>수집한 자료를 체계적으로 정리해보세요</li>
+                <li>자료들 사이의 관계를 찾아보세요</li>
+                <li>초기 의도와 연결하여 정리해보세요</li>
+            </ul>
+        `,
+        5: `
+            <h4>💡 일반화하기 단계</h4>
+            <p>탐구 결과를 바탕으로 일반적인 원리를 찾아보세요.</p>
+            <ul>
+                <li>탐구 결과에서 패턴이나 규칙을 찾아보세요</li>
+                <li>일반적으로 적용할 수 있는 원리를 도출해보세요</li>
+                <li>초기 의도했던 목표를 달성했는지 확인해보세요</li>
+            </ul>
+        `,
+        6: `
+            <h4>🌟 전이하기 단계</h4>
+            <p>학습한 내용을 새로운 상황에 적용해보세요.</p>
+            <ul>
+                <li>학습한 원리를 다른 상황에 적용해보세요</li>
+                <li>실생활에서 활용할 수 있는 방법을 생각해보세요</li>
+                <li>초기 의도와 연결하여 확장해보세요</li>
+            </ul>
+        `
+    };
+    
+    return guides[stage] || '<p>가이드를 준비 중입니다.</p>';
+}
+
+// 가이드 모달 닫기
+function closeGuidanceModal() {
+    const modal = document.querySelector('.guidance-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(modal);
+        }, 300);
+    }
+} 

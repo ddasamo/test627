@@ -521,4 +521,347 @@ body {
         background: #2d2d2d;
         color: #fff;
     }
+}
+
+/* ===== AI 코치 관련 스타일 ===== */
+
+/* AI 코치 상태 표시 */
+.ai-coach-status {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.ai-coach-enabled {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.ai-coach-disabled {
+    background: #f0f0f0;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+/* AI 피드백 컨테이너 */
+.ai-feedback-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.ai-feedback-container.show {
+    opacity: 1;
+}
+
+/* AI 피드백 카드 */
+.ai-feedback-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.ai-feedback-container.show .ai-feedback-card {
+    transform: translateY(0);
+}
+
+.ai-feedback-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 20px;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ai-coach-icon {
+    font-size: 1.5em;
+    margin-right: 10px;
+}
+
+.ai-feedback-header h4 {
+    margin: 0;
+    font-size: 1.3em;
+    flex: 1;
+}
+
+.match-score {
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.match-score.high-match {
+    background: #4CAF50;
+    color: white;
+}
+
+.match-score.medium-match {
+    background: #FF9800;
+    color: white;
+}
+
+.match-score.low-match {
+    background: #f44336;
+    color: white;
+}
+
+.ai-feedback-content {
+    padding: 25px;
+}
+
+.feedback-message {
+    margin-bottom: 20px;
+}
+
+.feedback-message p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    color: #333;
+    margin: 0;
+}
+
+.encouragement-message {
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    border-left: 4px solid #2196F3;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.encouragement-message p {
+    margin: 0;
+    color: #1976D2;
+    font-size: 1.05em;
+}
+
+.suggestions {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.suggestions h5 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.suggestions ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.suggestions li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+    color: #555;
+}
+
+.ai-feedback-actions {
+    padding: 0 25px 25px 25px;
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+}
+
+.ai-feedback-actions button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.btn-secondary:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a67d8, #6b46c1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* 가이드 모달 */
+.guidance-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.guidance-modal.show {
+    opacity: 1;
+}
+
+.guidance-content {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    max-width: 700px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.guidance-modal.show .guidance-content {
+    transform: translateY(0);
+}
+
+.guidance-header {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 20px;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.guidance-header h3 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background 0.3s ease;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.guidance-body {
+    padding: 25px;
+}
+
+.guidance-body h4 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.guidance-body p {
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 15px;
+}
+
+.guidance-body ul {
+    padding-left: 20px;
+    margin-bottom: 20px;
+}
+
+.guidance-body li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+    color: #555;
+}
+
+.guidance-footer {
+    padding: 0 25px 25px 25px;
+    text-align: center;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .ai-feedback-card,
+    .guidance-content {
+        margin: 10px;
+        max-height: 90vh;
+    }
+    
+    .ai-feedback-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .ai-feedback-actions {
+        flex-direction: column;
+    }
+    
+    .ai-feedback-actions button {
+        width: 100%;
+    }
+    
+    .match-score {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* 애니메이션 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ai-feedback-card,
+.guidance-content {
+    animation: fadeInUp 0.3s ease;
 } 
