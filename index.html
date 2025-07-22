@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>의도기반 탐구학습 시스템</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="styles.css">
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- 로그인/회원가입 화면 -->
@@ -29,7 +30,12 @@
                     <input type="password" id="loginPassword" class="form-input" placeholder="비밀번호를 입력하세요" required>
                 </div>
                 <button type="submit" class="btn-primary">로그인</button>
-                <p class="switch-form">계정이 없으신가요? <span onclick="showSignupForm()">회원가입</span></p>
+                <p class="switch-form">계정이 없으신가요? <span id="showSignupBtn">회원가입</span></p>
+                
+                <!-- 교사용 버튼 추가 -->
+                <div class="teacher-access">
+                    <button type="button" class="btn-teacher" id="teacherAccessBtn">🎓 교사용 접속</button>
+                </div>
             </form>
 
             <!-- 회원가입 폼 -->
@@ -93,7 +99,7 @@
                     </label>
                 </div>
                 <button type="submit" class="btn-primary">회원가입</button>
-                <p class="switch-form">이미 계정이 있으신가요? <span onclick="showLoginForm()">로그인</span></p>
+                <p class="switch-form">이미 계정이 있으신가요? <span id="showLoginBtn">로그인</span></p>
             </form>
 
             <div class="error-message" id="errorMessage"></div>
@@ -114,7 +120,7 @@
                     <div id="userName">사용자님</div>
                     <div id="userClass">학급 정보</div>
                 </div>
-                <button class="logout-btn" onclick="logout()">로그아웃</button>
+                <button class="logout-btn" id="logoutBtn">로그아웃</button>
             </div>
         </div>
 
@@ -155,32 +161,32 @@
                 <div class="stage-navigation">
                     <h3>탐구 단계</h3>
                     <div class="nav-stages">
-                        <button class="nav-stage active" data-stage="1" onclick="showStage(1)">
+                        <button class="nav-stage active" data-stage="1">
                             <span class="stage-number">1</span>
                             <span class="stage-name">관계맺기</span>
                             <span class="stage-status" id="navStatus1">●</span>
                         </button>
-                        <button class="nav-stage" data-stage="2" onclick="showStage(2)">
+                        <button class="nav-stage" data-stage="2">
                             <span class="stage-number">2</span>
                             <span class="stage-name">집중하기</span>
                             <span class="stage-status" id="navStatus2">○</span>
                         </button>
-                        <button class="nav-stage" data-stage="3" onclick="showStage(3)">
+                        <button class="nav-stage" data-stage="3">
                             <span class="stage-number">3</span>
                             <span class="stage-name">조사하기</span>
                             <span class="stage-status" id="navStatus3">○</span>
                         </button>
-                        <button class="nav-stage" data-stage="4" onclick="showStage(4)">
+                        <button class="nav-stage" data-stage="4">
                             <span class="stage-number">4</span>
                             <span class="stage-name">정리하기</span>
                             <span class="stage-status" id="navStatus4">○</span>
                         </button>
-                        <button class="nav-stage" data-stage="5" onclick="showStage(5)">
+                        <button class="nav-stage" data-stage="5">
                             <span class="stage-number">5</span>
                             <span class="stage-name">일반화하기</span>
                             <span class="stage-status" id="navStatus5">○</span>
                         </button>
-                        <button class="nav-stage" data-stage="6" onclick="showStage(6)">
+                        <button class="nav-stage" data-stage="6">
                             <span class="stage-number">6</span>
                             <span class="stage-name">전이하기</span>
                             <span class="stage-status" id="navStatus6">○</span>
@@ -203,7 +209,7 @@
                             <textarea id="intent" class="input-area" placeholder="예: 왜 식물은 빛을 향해 자랄까? 어떤 조건에서 식물이 더 잘 자랄까?"></textarea>
                         </div>
                         <div class="stage-actions">
-                            <button class="btn-primary" onclick="submitStage(1)">다음 단계로</button>
+                            <button class="btn-primary" data-stage="1">다음 단계로</button>
                         </div>
                     </div>
                 </div>
@@ -220,8 +226,8 @@
                             <textarea id="question" class="input-area" placeholder="예: 햇빛의 양에 따라 식물의 성장 속도가 어떻게 달라질까?"></textarea>
                         </div>
                         <div class="stage-actions">
-                            <button class="btn-secondary" onclick="showStage(1)">이전</button>
-                            <button class="btn-primary" onclick="submitStage(2)">다음 단계로</button>
+                            <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-primary" data-stage="2">다음 단계로</button>
                         </div>
                     </div>
                 </div>
@@ -238,8 +244,8 @@
                             <textarea id="research" class="input-area" placeholder="예: 인터넷에서 찾은 자료, 실험 결과, 관찰한 내용 등"></textarea>
                         </div>
                         <div class="stage-actions">
-                            <button class="btn-secondary" onclick="showStage(2)">이전</button>
-                            <button class="btn-primary" onclick="submitStage(3)">다음 단계로</button>
+                            <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-primary" data-stage="3">다음 단계로</button>
                         </div>
                     </div>
                 </div>
@@ -256,8 +262,8 @@
                             <textarea id="organize" class="input-area" placeholder="예: 데이터 분석 결과, 패턴 발견, 중요한 발견사항 등"></textarea>
                         </div>
                         <div class="stage-actions">
-                            <button class="btn-secondary" onclick="showStage(3)">이전</button>
-                            <button class="btn-primary" onclick="submitStage(4)">다음 단계로</button>
+                            <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-primary" data-stage="4">다음 단계로</button>
                         </div>
                     </div>
                 </div>
@@ -274,8 +280,8 @@
                             <textarea id="generalize" class="input-area" placeholder="예: 발견한 법칙이나 원리, 결론 등"></textarea>
                         </div>
                         <div class="stage-actions">
-                            <button class="btn-secondary" onclick="showStage(4)">이전</button>
-                            <button class="btn-primary" onclick="submitStage(5)">다음 단계로</button>
+                            <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-primary" data-stage="5">다음 단계로</button>
                         </div>
                     </div>
                 </div>
@@ -292,8 +298,8 @@
                             <textarea id="transfer" class="input-area" placeholder="예: 실생활 적용 방법, 다른 분야와의 연결점 등"></textarea>
                         </div>
                         <div class="stage-actions">
-                            <button class="btn-secondary" onclick="showStage(5)">이전</button>
-                            <button class="btn-primary" onclick="submitStage(6)">탐구 완료</button>
+                            <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-primary" data-stage="6">탐구 완료</button>
                         </div>
                     </div>
                 </div>
@@ -312,8 +318,8 @@
                 <p id="reflectionQuestion"></p>
                 <textarea id="reflectionAnswer" placeholder="자신의 생각을 자유롭게 적어보세요..."></textarea>
                 <div class="reflection-actions">
-                    <button class="btn-secondary" onclick="closeReflection()">건너뛰기</button>
-                    <button class="btn-primary" onclick="submitReflection()">제출하기</button>
+                    <button class="btn-secondary" id="closeReflectionBtn">건너뛰기</button>
+                    <button class="btn-primary" id="submitReflectionBtn">제출하기</button>
                 </div>
             </div>
         </div>
@@ -321,6 +327,65 @@
         <div class="error-message" id="errorMessage"></div>
     </div>
 
+    <!-- 교사용 비밀번호 입력 모달 -->
+    <div class="teacher-password-modal" id="teacherPasswordModal" style="display: none;">
+        <div class="modal-content">
+            <h3>🎓 교사용 접속</h3>
+            <p>교사 전용 비밀번호를 입력하세요</p>
+            <div class="form-group">
+                <input type="password" id="teacherPassword" class="form-input" placeholder="교사 비밀번호" maxlength="20">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="cancelTeacherLogin">취소</button>
+                <button class="btn-primary" id="confirmTeacherLogin">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 교사용 대시보드 -->
+    <div id="teacherDashboard" style="display: none;">
+        <div class="teacher-header">
+            <div class="teacher-header-left">
+                <h1>🎓 교사용 대시보드</h1>
+                <p>학생 탐구학습 현황 및 레포트 관리</p>
+            </div>
+            <div class="teacher-header-right">
+                <button class="logout-btn" id="teacherLogoutBtn">로그아웃</button>
+            </div>
+        </div>
+
+        <div class="teacher-content">
+            <div class="students-section">
+                <h2>📋 등록된 학생 목록</h2>
+                <div class="students-grid" id="studentsGrid">
+                    <!-- 학생 목록이 동적으로 생성됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 개별 학생 레포트 페이지 -->
+    <div id="studentReportPage" style="display: none;">
+        <div class="report-header">
+            <button class="btn-back" id="backToDashboard">← 대시보드로 돌아가기</button>
+            <h1 id="reportStudentName">학생 레포트</h1>
+            <div class="report-actions">
+                <button class="btn-secondary" id="generateReportBtn">🤖 AI 레포트 생성</button>
+                <button class="btn-primary" id="printReportBtn">🖨️ 프린트</button>
+                <button class="btn-success" id="downloadPdfBtn">📄 PDF 다운로드</button>
+            </div>
+        </div>
+
+        <div class="report-content" id="reportContent">
+            <!-- 레포트 내용이 동적으로 생성됩니다 -->
+        </div>
+    </div>
+
+    <!-- PDF 생성 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- 스크립트 파일들 -->
     <script src="config.js"></script>
     <script src="script.js"></script>
 </body>

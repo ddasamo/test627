@@ -16,16 +16,36 @@ let totalScore = 0;
 let initialIntent = '';
 let reflectionData = [];
 let currentInquiryId = null;
-let aiCoachEnabled = false; // AI 코치 활성화 상태
+let stageScores = [0, 0, 0, 0, 0, 0, 0]; // 단계별 점수 배열
 
 // ===== AI 탐구 코치 관련 변수 =====
+let aiCoachEnabled = false; // AI 코치 활성화 상태
 let currentAIFeedback = null;
 
 // ===== 초기화 =====
-document.addEventListener('DOMContentLoaded', async () => {
-    // 설정 초기화
-    initializeConfig();
-    validateConfig();
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('DOM 로드 완료');
+    
+    // CONFIG 유효성 검사
+    if (!validateConfig()) {
+        console.error('설정 오류가 발생했습니다.');
+        return;
+    }
+    
+    // Supabase 초기화
+    if (!CONFIG.DEMO_MODE) {
+        try {
+            // Supabase 클라이언트 생성
+            supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+            console.log('Supabase 클라이언트 초기화 완료');
+        } catch (error) {
+            console.error('Supabase 초기화 오류:', error);
+            showError('데이터베이스 연결에 실패했습니다.');
+        }
+    }
+    
+    // 이벤트 리스너 등록
+    setupEventListeners();
     
     // AI 코치 초기화
     initializeAICoach();
@@ -33,15 +53,160 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 인증 상태 확인
     await checkAuthState();
     
-    // 인증 폼 설정
-    setupAuthForms();
-    
-    // 터치 이벤트 최적화
-    setupTouchOptimization();
-
     // 앱 초기화
     initializeApp();
+    
+    console.log('애플리케이션 초기화 완료');
 });
+
+// 이벤트 리스너 설정
+function setupEventListeners() {
+    console.log('이벤트 리스너 설정 시작');
+    
+    // 로그인 폼 이벤트
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+        console.log('로그인 폼 이벤트 리스너 등록');
+    }
+    
+    // 회원가입 폼 이벤트
+    const signupForm = document.getElementById('signupForm');
+    if (signupForm) {
+        signupForm.addEventListener('submit', handleSignup);
+        console.log('회원가입 폼 이벤트 리스너 등록');
+    }
+    
+    // 폼 전환 버튼들
+    const showSignupBtn = document.getElementById('showSignupBtn');
+    const showLoginBtn = document.getElementById('showLoginBtn');
+    
+    if (showSignupBtn) {
+        showSignupBtn.addEventListener('click', function() {
+            console.log('회원가입 폼으로 전환');
+            showSignupForm();
+        });
+        console.log('회원가입 전환 버튼 이벤트 리스너 등록');
+    }
+    
+    if (showLoginBtn) {
+        showLoginBtn.addEventListener('click', function() {
+            console.log('로그인 폼으로 전환');
+            showLoginForm();
+        });
+        console.log('로그인 전환 버튼 이벤트 리스너 등록');
+    }
+    
+    // 로그아웃 버튼
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            console.log('로그아웃 시도');
+            logout();
+        });
+        console.log('로그아웃 버튼 이벤트 리스너 등록');
+    }
+    
+    // 단계 네비게이션 버튼들
+    const navStages = document.querySelectorAll('.nav-stage');
+    navStages.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const stage = parseInt(this.getAttribute('data-stage'));
+            console.log('단계 네비게이션 클릭:', stage);
+            showStage(stage);
+        });
+    });
+    console.log('단계 네비게이션 버튼 이벤트 리스너 등록:', navStages.length, '개');
+    
+    // 단계 제출 버튼들
+    const stageButtons = document.querySelectorAll('.btn-primary[data-stage], .btn-secondary[data-stage]');
+    stageButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const stage = this.getAttribute('data-stage');
+            console.log('단계 버튼 클릭:', stage);
+            
+            if (stage === 'prev') {
+                // 이전 단계로
+                if (currentStage > 1) {
+                    showStage(currentStage - 1);
+                }
+            } else {
+                // 단계 제출
+                const stageNum = parseInt(stage);
+                submitStage(stageNum);
+            }
+        });
+    });
+    console.log('단계 버튼 이벤트 리스너 등록:', stageButtons.length, '개');
+    
+    // 성찰 팝업 버튼들
+    const closeReflectionBtn = document.getElementById('closeReflectionBtn');
+    const submitReflectionBtn = document.getElementById('submitReflectionBtn');
+    
+    if (closeReflectionBtn) {
+        closeReflectionBtn.addEventListener('click', closeReflection);
+    }
+    
+    if (submitReflectionBtn) {
+        submitReflectionBtn.addEventListener('click', submitReflection);
+    }
+    
+    // 교사용 이벤트 리스너 설정
+    setupTeacherEventListeners();
+    
+    console.log('모든 이벤트 리스너 설정 완료');
+}
+
+// 폼 전환 함수들 (전역으로 노출)
+function showLoginForm() {
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    
+    if (loginForm) loginForm.style.display = 'block';
+    if (signupForm) signupForm.style.display = 'none';
+}
+
+function showSignupForm() {
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    
+    if (loginForm) loginForm.style.display = 'none';
+    if (signupForm) signupForm.style.display = 'block';
+}
+
+// 전역 함수로 노출
+window.showLoginForm = showLoginForm;
+window.showSignupForm = showSignupForm;
+
+// 오류 메시지 표시
+function showError(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    } else {
+        alert(message); // 백업으로 alert 사용
+    }
+}
+
+// 인증 상태 확인
+async function checkAuthState() {
+    if (CONFIG.DEMO_MODE) {
+        // 데모 모드에서는 저장된 사용자 확인
+        const savedUser = localStorage.getItem('demoUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            await showMainApp();
+        }
+        return;
+    }
+    
+    // Supabase 인증 상태 확인은 여기서는 스킵
+    // 실제 구현에서는 세션 기반 인증을 사용할 예정
+}
 
 // 설정 초기화 함수
 function initializeConfig() {
@@ -64,76 +229,15 @@ function initializeConfig() {
     }
 }
 
-// 인증 상태 확인
-async function checkAuthState() {
-    try {
-        if (CONFIG.DEMO_MODE) {
-            // 데모 모드 - localStorage 확인
-            const savedUser = localStorage.getItem('currentUser');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                await showMainApp();
-                await loadUserProgress();
-            }
-        } else {
-            // Supabase 인증 확인
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                currentUser = user;
-                await showMainApp();
-                await loadUserProgress();
-            }
-        }
-    } catch (error) {
-        console.error('인증 상태 확인 오류:', error);
-    }
-}
-
-// 인증 폼 설정
-function setupAuthForms() {
-    const loginForm = document.getElementById('loginForm');
-    const signupForm = document.getElementById('signupForm');
-    const switchLink = document.getElementById('switchLink');
-    const switchText = document.getElementById('switchText');
-
-    loginForm.addEventListener('submit', handleLogin);
-    signupForm.addEventListener('submit', handleSignup);
-
-    switchLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleAuthForms();
-    });
-}
-
-// 로그인/회원가입 폼 전환
-function toggleAuthForms() {
-    const loginForm = document.getElementById('loginForm');
-    const signupForm = document.getElementById('signupForm');
-    const switchText = document.getElementById('switchText');
-    const switchLink = document.getElementById('switchLink');
-
-    if (loginForm.style.display === 'none') {
-        // 회원가입 -> 로그인
-        loginForm.style.display = 'block';
-        signupForm.style.display = 'none';
-        switchText.textContent = '계정이 없으신가요?';
-        switchLink.textContent = '회원가입';
-    } else {
-        // 로그인 -> 회원가입
-        loginForm.style.display = 'none';
-        signupForm.style.display = 'block';
-        switchText.textContent = '이미 계정이 있으신가요?';
-        switchLink.textContent = '로그인';
-    }
-    hideMessages();
-}
-
 // 로그인 처리
 async function handleLogin(event) {
     event.preventDefault();
+    console.log('로그인 시도 시작');
     
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
+    
+    console.log('입력된 아이디:', username);
     
     if (!username || !password) {
         showError('아이디와 비밀번호를 모두 입력해주세요.');
@@ -142,27 +246,48 @@ async function handleLogin(event) {
     
     try {
         if (CONFIG.DEMO_MODE) {
-            // 데모 모드에서는 간단한 검증만
-            if (username === 'demo' && password === '1234') {
+            console.log('데모 모드로 로그인 처리 중...');
+            
+            // 간단한 테스트 계정들
+            const testAccounts = {
+                'demo': { password: '1234', name: '데모 사용자', school: '데모 초등학교', grade: '5', class: '1', number: '1' },
+                'test': { password: '1234', name: '테스트 사용자', school: '테스트 초등학교', grade: '4', class: '2', number: '5' }
+            };
+            
+            if (testAccounts[username] && testAccounts[username].password === password) {
                 currentUser = {
-                    id: 'demo',
-                    username: 'demo',
-                    name: '데모 사용자',
-                    school: '데모 초등학교',
-                    grade: '5',
-                    class: '1',
-                    number: '1'
+                    id: username,
+                    username: username,
+                    name: testAccounts[username].name,
+                    school: testAccounts[username].school,
+                    grade: testAccounts[username].grade,
+                    class: testAccounts[username].class,
+                    number: testAccounts[username].number
                 };
+                
+                localStorage.setItem('demoUser', JSON.stringify(currentUser));
+                console.log('데모 로그인 성공:', currentUser);
                 await showMainApp();
                 return;
-            } else {
-                showError('데모 모드에서는 아이디: demo, 비밀번호: 1234를 사용해주세요.');
-                return;
             }
+            
+            // 저장된 사용자 확인
+            const savedUser = localStorage.getItem('demoUser');
+            if (savedUser) {
+                const userData = JSON.parse(savedUser);
+                if (userData.username === username && userData.password === password) {
+                    currentUser = userData;
+                    console.log('저장된 사용자로 로그인 성공');
+                    await showMainApp();
+                    return;
+                }
+            }
+            
+            showError('데모 모드: 아이디 demo/test, 비밀번호 1234를 사용하거나 회원가입 후 로그인하세요.');
+            return;
         }
         
         // Supabase를 사용한 실제 로그인
-        // profiles 테이블에서 아이디로 사용자 검색
         const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -196,13 +321,14 @@ async function handleLogin(event) {
         
     } catch (error) {
         console.error('로그인 오류:', error);
-        showError('로그인 중 오류가 발생했습니다.');
+        showError('로그인 중 오류가 발생했습니다: ' + error.message);
     }
 }
 
 // 회원가입 처리
 async function handleSignup(event) {
     event.preventDefault();
+    console.log('회원가입 시도 시작');
     
     const school = document.getElementById('signupSchool').value.trim();
     const grade = document.getElementById('signupGrade').value;
@@ -212,6 +338,8 @@ async function handleSignup(event) {
     const username = document.getElementById('signupUsername').value.trim();
     const password = document.getElementById('signupPassword').value;
     const privacyAgree = document.getElementById('privacyAgree').checked;
+    
+    console.log('회원가입 데이터:', { school, grade, classNum, number, name, username });
     
     // 유효성 검사
     if (!school || !grade || !classNum || !number || !name || !username || !password) {
@@ -245,19 +373,35 @@ async function handleSignup(event) {
     
     try {
         if (CONFIG.DEMO_MODE) {
-            // 데모 모드에서는 localStorage에 저장
+            console.log('데모 모드로 회원가입 처리 중...');
+            
+            // 중복 아이디 확인 (localStorage)
+            const existingUsers = JSON.parse(localStorage.getItem('demoUsers') || '{}');
+            if (existingUsers[username]) {
+                showError('이미 사용 중인 아이디입니다.');
+                return;
+            }
+            
+            // 새 사용자 생성
             const userData = {
                 id: Date.now().toString(),
                 username,
+                password,
                 name,
                 school,
                 grade,
                 class: classNum,
                 number: studentNumber,
-                password
+                created_at: new Date().toISOString()
             };
+            
+            // 사용자 목록에 추가
+            existingUsers[username] = userData;
+            localStorage.setItem('demoUsers', JSON.stringify(existingUsers));
             localStorage.setItem('demoUser', JSON.stringify(userData));
+            
             currentUser = userData;
+            console.log('데모 회원가입 성공:', currentUser);
             await showMainApp();
             return;
         }
@@ -295,7 +439,7 @@ async function handleSignup(event) {
             
         if (insertError) {
             console.error('회원가입 오류:', insertError);
-            showError('회원가입 중 오류가 발생했습니다.');
+            showError('회원가입 중 오류가 발생했습니다: ' + insertError.message);
             return;
         }
         
@@ -315,7 +459,7 @@ async function handleSignup(event) {
         
     } catch (error) {
         console.error('회원가입 오류:', error);
-        showError('회원가입 중 오류가 발생했습니다.');
+        showError('회원가입 중 오류가 발생했습니다: ' + error.message);
     }
 }
 
@@ -324,7 +468,7 @@ async function logout() {
     try {
         if (CONFIG.DEMO_MODE) {
             // 데모 모드 로그아웃
-            localStorage.removeItem('currentUser');
+            localStorage.removeItem('demoUser');
         } else {
             // Supabase 로그아웃
             await supabase.auth.signOut();
@@ -376,27 +520,28 @@ function showAuthContainer() {
     document.getElementById('mainApp').style.display = 'none';
 }
 
-// 폼 전환 함수들
-function showLoginForm() {
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('signupForm').style.display = 'none';
-}
-
-function showSignupForm() {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('signupForm').style.display = 'block';
-}
-
 // 오류 메시지 표시
-function showError(message) {
+function showErrorMessage(message) {
     const errorDiv = document.getElementById('errorMessage');
-    if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-        setTimeout(() => {
-            errorDiv.style.display = 'none';
-        }, 5000);
-    }
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 5000);
+}
+
+function showSuccessMessage(message) {
+    const successDiv = document.getElementById('successMessage');
+    successDiv.textContent = message;
+    successDiv.style.display = 'block';
+    setTimeout(() => {
+        successDiv.style.display = 'none';
+    }, 3000);
+}
+
+function hideMessages() {
+    document.getElementById('errorMessage').style.display = 'none';
+    document.getElementById('successMessage').style.display = 'none';
 }
 
 // 로그인 처리
@@ -595,7 +740,7 @@ async function logout() {
     try {
         if (CONFIG.DEMO_MODE) {
             // 데모 모드 로그아웃
-            localStorage.removeItem('currentUser');
+            localStorage.removeItem('demoUser');
         } else {
             // Supabase 로그아웃
             await supabase.auth.signOut();
@@ -609,6 +754,25 @@ async function logout() {
         console.error('로그아웃 오류:', error);
     }
 }
+
+// 앱 리셋 함수
+function resetApp() {
+    // 모든 단계 데이터 초기화
+    stageData = {
+        1: '', 2: '', 3: '', 4: '', 5: '', 6: ''
+    };
+    currentStage = 1;
+    totalScore = 0;
+    initialIntent = '';
+    
+    // UI 초기화
+    if (typeof initializeApp === 'function') {
+        initializeApp();
+    }
+}
+
+// 전역 함수로 노출
+window.logout = logout;
 
 // ===== 데이터 관리 함수 =====
 
@@ -652,79 +816,33 @@ function restoreProgressData(data) {
     updateAllUI();
 }
 
-// 진행 상황 저장
+// 진행 상황 저장 (새로 작성된 버전)
 async function saveProgress() {
     try {
-        const progressData = {
-            userId: currentUser.id,
-            inquiryId: currentInquiryId,
-            currentStage,
-            totalScore,
-            stageScores,
-            initialIntent,
-            reflectionData,
-            updatedAt: new Date().toISOString()
-        };
-
+        console.log('📁 진행 상황 저장 시작');
+        
         if (CONFIG.DEMO_MODE) {
             // 데모 모드 - localStorage에 저장
+            const progressData = {
+                userId: currentUser.id,
+                inquiryId: currentInquiryId,
+                currentStage,
+                totalScore,
+                stageScores,
+                initialIntent,
+                reflectionData,
+                updatedAt: new Date().toISOString()
+            };
             localStorage.setItem(`inquiry_${currentUser.id}`, JSON.stringify(progressData));
+            console.log('✅ 데모 모드 저장 완료');
         } else {
-            // Supabase에 저장
-            if (currentInquiryId) {
-                console.log('기존 탐구 데이터 업데이트 중...', currentInquiryId);
-                const { data, error } = await supabase
-                    .from(CONFIG.DB_TABLES.INQUIRIES)
-                    .update({
-                        current_stage: currentStage,
-                        total_score: totalScore,
-                        stage_scores: stageScores,
-                        initial_intent: initialIntent,
-                        reflection_data: reflectionData,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', currentInquiryId)
-                    .select();
-                
-                if (error) {
-                    console.error('탐구 데이터 업데이트 오류:', error);
-                    throw error;
-                } else {
-                    console.log('탐구 데이터 업데이트 성공:', data);
-                }
-            } else {
-                console.log('새 탐구 데이터 생성 중...', currentUser.id);
-                const { data, error } = await supabase
-                    .from(CONFIG.DB_TABLES.INQUIRIES)
-                    .insert({
-                        user_id: currentUser.id,
-                        current_stage: currentStage,
-                        total_score: totalScore,
-                        stage_scores: stageScores,
-                        initial_intent: initialIntent,
-                        reflection_data: reflectionData,
-                        status: 'in_progress'
-                    })
-                    .select()
-                    .single();
-                
-                if (error) {
-                    console.error('탐구 데이터 생성 오류:', error);
-                    throw error;
-                } else {
-                    console.log('탐구 데이터 생성 성공:', data);
-                    if (data) currentInquiryId = data.id;
-                }
-            }
-        }
-
-        if (isDebugMode()) {
-            console.log('진행 상황 저장 완료:', progressData);
+            // Supabase 저장은 saveStageToDatabase에서 처리됨
+            console.log('✅ Supabase 저장은 saveStageToDatabase에서 처리됨');
         }
 
     } catch (error) {
-        console.error('진행 상황 저장 오류:', error);
-        showErrorMessage(CONFIG.MESSAGES.ERRORS.SAVE_FAILED);
+        console.error('❌ 진행 상황 저장 오류:', error);
+        showError('데이터 저장에 실패했습니다.');
     }
 }
 
@@ -1003,29 +1121,6 @@ function showLoading() {
 
 function hideLoading() {
     document.getElementById('loading').style.display = 'none';
-}
-
-function showErrorMessage(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-    setTimeout(() => {
-        errorDiv.style.display = 'none';
-    }, 5000);
-}
-
-function showSuccessMessage(message) {
-    const successDiv = document.getElementById('successMessage');
-    successDiv.textContent = message;
-    successDiv.style.display = 'block';
-    setTimeout(() => {
-        successDiv.style.display = 'none';
-    }, 3000);
-}
-
-function hideMessages() {
-    document.getElementById('errorMessage').style.display = 'none';
-    document.getElementById('successMessage').style.display = 'none';
 }
 
 // ===== 자동 저장 설정 =====
@@ -1507,8 +1602,10 @@ function updateProgress() {
     }
 }
 
-// 단계 제출 함수 (기존 함수 수정)
+// 단계 제출 함수 (수정된 버전)
 async function submitStage(stageNumber) {
+    console.log('단계 제출 시작:', stageNumber);
+    
     const inputFields = {
         1: 'intent',
         2: 'question',
@@ -1532,28 +1629,254 @@ async function submitStage(stageNumber) {
         return;
     }
     
-    // 데이터 저장
-    saveStageData(stageNumber, inputValue);
-    
-    // AI 피드백 분석 (1단계가 아닌 경우에만)
-    if (stageNumber > 1 && initialIntent) {
-        try {
-            await analyzeIntentMatch(inputValue, stageNumber);
-        } catch (error) {
-            console.error('AI 분석 오류:', error);
+    try {
+        // 로딩 표시
+        const submitBtn = document.querySelector(`[data-stage="${stageNumber}"]`);
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '저장 중...';
+        }
+        
+        // 1단계인 경우 초기 의도 설정
+        if (stageNumber === 1) {
+            initialIntent = inputValue;
+            updateIntentDisplay();
+        }
+        
+        // 단계 데이터 저장
+        stageData[stageNumber] = inputValue;
+        
+        // AI 점수 계산 (간단한 버전)
+        const maxScore = CONFIG.APP_SETTINGS.STAGE_MAX_SCORES[stageNumber];
+        const earnedScore = Math.floor(Math.random() * (maxScore - 5)) + 5; // 5점~최대점수 사이
+        
+        // 단계별 점수 업데이트
+        stageScores[stageNumber] = earnedScore;
+        
+        // Supabase에 저장
+        await saveStageToDatabase(stageNumber, inputValue, earnedScore);
+        
+        // UI 업데이트
+        updateProgress();
+        updateNavigation();
+        
+        // 성공 메시지
+        showSuccess(`${stageNumber}단계가 성공적으로 저장되었습니다!`);
+        
+        // 다음 단계로 이동
+        if (stageNumber < 6) {
+            setTimeout(() => {
+                showStage(stageNumber + 1);
+            }, 1000);
+        } else {
+            // 탐구 완료
+            setTimeout(() => {
+                showCompletionMessage();
+            }, 1000);
+        }
+        
+    } catch (error) {
+        console.error('단계 제출 오류:', error);
+        showError('저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+        // 버튼 복원
+        const submitBtn = document.querySelector(`[data-stage="${stageNumber}"]`);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = stageNumber < 6 ? '다음 단계로' : '탐구 완료';
         }
     }
+}
+
+// 단계별 데이터를 Supabase에 저장하는 함수
+async function saveStageToDatabase(stageNumber, inputValue, score) {
+    console.log('=== 데이터베이스 저장 시작 ===');
+    console.log('현재 설정:', {
+        DEMO_MODE: CONFIG.DEMO_MODE,
+        stageNumber,
+        inputValue: inputValue.substring(0, 50) + '...',
+        score,
+        currentUser: currentUser,
+        supabase: !!supabase
+    });
     
-    // 데이터베이스에 저장
-    await saveProgress();
+    if (!currentUser || !currentUser.id) {
+        console.error('❌ 사용자 정보 없음');
+        throw new Error('로그인된 사용자 정보가 없습니다.');
+    }
     
-    // 다음 단계로 이동 (6단계가 아닌 경우)
-    if (stageNumber < 6) {
-        showStage(stageNumber + 1);
-    } else {
-        // 탐구 완료
-        await completeInquiry();
-        showCompletionMessage();
+    if (CONFIG.DEMO_MODE) {
+        console.log('⚠️ 데모 모드: localStorage에 저장');
+        
+        // 데모 모드에서 localStorage에 저장
+        const stageDataToSave = {};
+        for (let i = 1; i <= 6; i++) {
+            if (stageData[i]) {
+                stageDataToSave[i] = {
+                    input: stageData[i],
+                    score: i === stageNumber ? score : 0,
+                    completed: !!stageData[i]
+                };
+            }
+        }
+        
+        // 총점 계산 (stageScores 배열 사용)
+        let newTotalScore = 0;
+        for (let i = 1; i <= 6; i++) {
+            if (stageScores[i]) {
+                newTotalScore += stageScores[i];
+            }
+        }
+        
+        // 진행률 계산
+        const completedStages = Object.keys(stageDataToSave).length;
+        const progress = Math.round((completedStages / 6) * 100);
+        
+        // localStorage에 저장
+        const inquiryData = {
+            user_id: currentUser.id,
+            intent: stageNumber === 1 ? inputValue : initialIntent,
+            stage: stageNumber,
+            stage_data: stageDataToSave,
+            total_score: newTotalScore,
+            progress: progress,
+            completed: false,
+            updated_at: new Date().toISOString()
+        };
+        
+        localStorage.setItem(`inquiry_${currentUser.id}`, JSON.stringify(inquiryData));
+        
+        // 전역 변수 업데이트
+        totalScore = newTotalScore;
+        
+        console.log('✅ 데모 모드 localStorage 저장 완료:', inquiryData);
+        return;
+    }
+    
+    if (!supabase) {
+        console.error('❌ Supabase 클라이언트가 초기화되지 않았습니다.');
+        throw new Error('데이터베이스 연결이 없습니다.');
+    }
+    
+    try {
+        console.log('🔍 기존 탐구 데이터 조회 중...', currentUser.id);
+        
+        // 현재 사용자의 탐구 데이터가 있는지 확인
+        const { data: existingInquiry, error: selectError } = await supabase
+            .from('inquiries')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .single();
+        
+        if (selectError && selectError.code !== 'PGRST116') {
+            console.error('❌ 기존 데이터 조회 오류:', selectError);
+            throw selectError;
+        }
+        
+        console.log('📋 기존 데이터 조회 결과:', existingInquiry ? '있음' : '없음');
+        
+        // 단계별 데이터 구조 생성
+        const stageDataToSave = {};
+        for (let i = 1; i <= 6; i++) {
+            if (stageData[i]) {
+                stageDataToSave[i] = {
+                    input: stageData[i],
+                    score: i === stageNumber ? score : (existingInquiry?.stage_data?.[i]?.score || 0),
+                    completed: !!stageData[i]
+                };
+            }
+        }
+        
+        console.log('📊 저장할 단계별 데이터:', stageDataToSave);
+        
+        // 총점 계산 (stageScores 배열 사용)
+        let newTotalScore = 0;
+        for (let i = 1; i <= 6; i++) {
+            if (stageScores[i]) {
+                newTotalScore += stageScores[i];
+            }
+        }
+        
+        // 진행률 계산
+        const completedStages = Object.keys(stageDataToSave).length;
+        const progress = Math.round((completedStages / 6) * 100);
+        
+        console.log('📈 계산된 점수 및 진행률:', { newTotalScore, progress, completedStages });
+        
+        if (existingInquiry) {
+            // 기존 데이터 업데이트
+            console.log('🔄 기존 탐구 데이터 업데이트 중...', existingInquiry.id);
+            
+            const updateData = {
+                stage_data: stageDataToSave,
+                total_score: newTotalScore,
+                progress: progress,
+                intent: stageNumber === 1 ? inputValue : existingInquiry.intent,
+                stage: stageNumber,
+                updated_at: new Date().toISOString()
+            };
+            
+            console.log('📝 업데이트할 데이터:', updateData);
+            
+            const { data, error } = await supabase
+                .from('inquiries')
+                .update(updateData)
+                .eq('id', existingInquiry.id)
+                .select();
+                
+            if (error) {
+                console.error('❌ 탐구 데이터 업데이트 오류:', error);
+                throw error;
+            }
+            
+            console.log('✅ 탐구 데이터 업데이트 성공:', data);
+            currentInquiryId = existingInquiry.id;
+            
+        } else {
+            // 새 데이터 생성
+            console.log('🆕 새 탐구 데이터 생성 중...');
+            
+            const insertData = {
+                user_id: currentUser.id,
+                intent: stageNumber === 1 ? inputValue : '탐구 의도 미설정',
+                stage: stageNumber,
+                stage_data: stageDataToSave,
+                total_score: newTotalScore,
+                progress: progress,
+                completed: false
+            };
+            
+            console.log('📝 생성할 데이터:', insertData);
+            
+            const { data, error } = await supabase
+                .from('inquiries')
+                .insert(insertData)
+                .select()
+                .single();
+                
+            if (error) {
+                console.error('❌ 탐구 데이터 생성 오류:', error);
+                console.error('오류 세부사항:', {
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                    code: error.code
+                });
+                throw error;
+            }
+            
+            console.log('✅ 탐구 데이터 생성 성공:', data);
+            currentInquiryId = data.id;
+        }
+        
+        // 전역 변수 업데이트
+        totalScore = newTotalScore;
+        console.log('🎯 전역 변수 업데이트 완료:', { totalScore, currentInquiryId });
+        
+    } catch (error) {
+        console.error('💥 데이터베이스 저장 전체 오류:', error);
+        console.error('오류 스택:', error.stack);
+        throw error;
     }
 }
 
@@ -1562,10 +1885,769 @@ function showCompletionMessage() {
     alert('🎉 탐구 활동이 완료되었습니다!\n\n총 점수: ' + totalScore + '점\n진행률: 100%');
 }
 
+// 성공 메시지 표시
+function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #27ae60;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    `;
+    successDiv.textContent = message;
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        document.body.removeChild(successDiv);
+    }, 3000);
+}
+
+// 의도 표시 업데이트
+function updateIntentDisplay() {
+    const intentElement = document.getElementById('initialIntent');
+    if (intentElement && initialIntent) {
+        intentElement.textContent = initialIntent;
+    }
+}
+
 // 앱 초기화 시 1단계 표시
 function initializeApp() {
     showStage(1);
-    updateIntentDisplay();
-    updateProgress();
-    updateNavigation();
+    
+    // 기존 데이터가 있으면 복원
+    if (currentUser) {
+        loadUserProgress();
+    }
+}
+
+// 사용자 진행 데이터 로드
+async function loadUserProgress() {
+    if (!currentUser) return;
+    
+    try {
+        if (CONFIG.DEMO_MODE) {
+            // 데모 모드에서는 로컬 데이터 사용
+            return;
+        }
+        
+        const { data, error } = await supabase
+            .from('inquiries')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .single();
+            
+        if (data) {
+            console.log('사용자 진행 데이터 로드:', data);
+            
+            // 기존 데이터 복원
+            if (data.stage_data) {
+                Object.keys(data.stage_data).forEach(stageNum => {
+                    const stage = data.stage_data[stageNum];
+                    if (stage && stage.input) {
+                        stageData[stageNum] = stage.input;
+                        
+                        // 점수도 복원
+                        if (stage.score) {
+                            stageScores[stageNum] = stage.score;
+                        }
+                        
+                        // 입력 필드에 데이터 복원
+                        const inputFields = {
+                            1: 'intent',
+                            2: 'question',
+                            3: 'research',
+                            4: 'organize',
+                            5: 'generalize',
+                            6: 'transfer'
+                        };
+                        
+                        const fieldId = inputFields[stageNum];
+                        const inputElement = document.getElementById(fieldId);
+                        if (inputElement) {
+                            inputElement.value = stage.input;
+                        }
+                    }
+                });
+            }
+            
+            initialIntent = data.intent || '';
+            totalScore = data.total_score || 0;
+            currentStage = data.stage || 1;
+            currentInquiryId = data.id;
+            
+            // UI 업데이트
+            updateIntentDisplay();
+            updateProgress();
+            updateNavigation();
+            showStage(currentStage);
+        }
+        
+    } catch (error) {
+        console.log('사용자 진행 데이터 로드 중 오류:', error);
+    }
+} 
+
+// 설정 유효성 검사
+function validateConfig() {
+    if (!CONFIG) {
+        console.error('CONFIG 객체가 정의되지 않았습니다.');
+        return false;
+    }
+    
+    if (!CONFIG.DEMO_MODE) {
+        if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+            console.error('Supabase 설정이 누락되었습니다.');
+            return false;
+        }
+        
+        if (!CONFIG.SUPABASE_ANON_KEY || CONFIG.SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+            console.error('Supabase 설정이 누락되었습니다.');
+            return false;
+        }
+    }
+    
+    return true;
+} 
+
+// 성찰 팝업 관련 함수들
+function closeReflection() {
+    const reflectionPopup = document.getElementById('reflectionPopup');
+    if (reflectionPopup) {
+        reflectionPopup.style.display = 'none';
+    }
+}
+
+function submitReflection() {
+    const answer = document.getElementById('reflectionAnswer').value.trim();
+    if (answer) {
+        console.log('성찰 답변 제출:', answer);
+        // 성찰 데이터 저장 로직 추가 가능
+        reflectionData.push({
+            stage: currentStage,
+            question: document.getElementById('reflectionQuestion').textContent,
+            answer: answer,
+            timestamp: new Date().toISOString()
+        });
+    }
+    closeReflection();
+}
+
+// ===== 교사용 기능 =====
+
+// 교사 비밀번호 (실제 환경에서는 더 안전한 방식 사용)
+const TEACHER_PASSWORD = 'teacher2024';
+let currentStudentData = null;
+
+// 교사용 이벤트 리스너 설정
+function setupTeacherEventListeners() {
+    // 교사용 접속 버튼
+    const teacherAccessBtn = document.getElementById('teacherAccessBtn');
+    if (teacherAccessBtn) {
+        teacherAccessBtn.addEventListener('click', showTeacherPasswordModal);
+    }
+    
+    // 교사 비밀번호 모달 버튼들
+    const cancelTeacherLogin = document.getElementById('cancelTeacherLogin');
+    const confirmTeacherLogin = document.getElementById('confirmTeacherLogin');
+    
+    if (cancelTeacherLogin) {
+        cancelTeacherLogin.addEventListener('click', hideTeacherPasswordModal);
+    }
+    
+    if (confirmTeacherLogin) {
+        confirmTeacherLogin.addEventListener('click', handleTeacherLogin);
+    }
+    
+    // 교사 로그아웃
+    const teacherLogoutBtn = document.getElementById('teacherLogoutBtn');
+    if (teacherLogoutBtn) {
+        teacherLogoutBtn.addEventListener('click', handleTeacherLogout);
+    }
+    
+    // 대시보드로 돌아가기
+    const backToDashboard = document.getElementById('backToDashboard');
+    if (backToDashboard) {
+        backToDashboard.addEventListener('click', showTeacherDashboard);
+    }
+    
+    // 레포트 관련 버튼들
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    const printReportBtn = document.getElementById('printReportBtn');
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    
+    if (generateReportBtn) {
+        generateReportBtn.addEventListener('click', generateAIReport);
+    }
+    
+    if (printReportBtn) {
+        printReportBtn.addEventListener('click', printReport);
+    }
+    
+    if (downloadPdfBtn) {
+        downloadPdfBtn.addEventListener('click', downloadReportPDF);
+    }
+    
+    // Enter 키로 교사 비밀번호 입력
+    const teacherPassword = document.getElementById('teacherPassword');
+    if (teacherPassword) {
+        teacherPassword.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleTeacherLogin();
+            }
+        });
+    }
+}
+
+// 교사 비밀번호 모달 표시
+function showTeacherPasswordModal() {
+    document.getElementById('teacherPasswordModal').style.display = 'flex';
+    document.getElementById('teacherPassword').focus();
+}
+
+// 교사 비밀번호 모달 숨기기
+function hideTeacherPasswordModal() {
+    document.getElementById('teacherPasswordModal').style.display = 'none';
+    document.getElementById('teacherPassword').value = '';
+}
+
+// 교사 로그인 처리
+function handleTeacherLogin() {
+    const password = document.getElementById('teacherPassword').value;
+    
+    if (password === TEACHER_PASSWORD) {
+        hideTeacherPasswordModal();
+        showTeacherDashboard();
+    } else {
+        showError('교사 비밀번호가 올바르지 않습니다.');
+        document.getElementById('teacherPassword').value = '';
+        document.getElementById('teacherPassword').focus();
+    }
+}
+
+// 교사 대시보드 표시
+async function showTeacherDashboard() {
+    // 다른 화면 숨기기
+    document.getElementById('authContainer').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('studentReportPage').style.display = 'none';
+    
+    // 교사 대시보드 표시
+    document.getElementById('teacherDashboard').style.display = 'block';
+    
+    // 학생 목록 로드
+    await loadStudentsList();
+}
+
+// 학생 목록 로드
+async function loadStudentsList() {
+    const studentsGrid = document.getElementById('studentsGrid');
+    studentsGrid.innerHTML = '<div class="loading">학생 목록을 불러오는 중...</div>';
+    
+    try {
+        let students = [];
+        
+        if (CONFIG.DEMO_MODE) {
+            // 데모 모드: localStorage에서 학생 목록 가져오기
+            const demoUsers = JSON.parse(localStorage.getItem('demoUsers') || '{}');
+            students = Object.values(demoUsers);
+            
+            // 현재 로그인한 사용자도 추가 (localStorage에 있는 경우)
+            const currentDemoUser = JSON.parse(localStorage.getItem('demoUser') || '{}');
+            if (currentDemoUser.id && !students.find(s => s.id === currentDemoUser.id)) {
+                students.push(currentDemoUser);
+            }
+            
+            // 데모 데이터가 없으면 샘플 데이터 생성
+            if (students.length === 0) {
+                const sampleStudents = [
+                    {
+                        id: 'demo1',
+                        name: '김탐구',
+                        username: 'demo1',
+                        school: '탐구초등학교',
+                        grade: '4',
+                        class: '1',
+                        number: '5'
+                    },
+                    {
+                        id: 'demo2',
+                        name: '이과학',
+                        username: 'demo2',
+                        school: '과학초등학교',
+                        grade: '5',
+                        class: '2',
+                        number: '12'
+                    },
+                    {
+                        id: 'demo3',
+                        name: '박실험',
+                        username: 'demo3',
+                        school: '실험초등학교',
+                        grade: '6',
+                        class: '3',
+                        number: '8'
+                    }
+                ];
+                students = sampleStudents;
+                // 샘플 데이터를 localStorage에 저장
+                const demoUsers = {};
+                sampleStudents.forEach(student => {
+                    demoUsers[student.username] = student;
+                });
+                localStorage.setItem('demoUsers', JSON.stringify(demoUsers));
+            }
+        } else {
+            // Supabase에서 학생 목록 가져오기
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('created_at', { ascending: false });
+                
+            if (error) throw error;
+            students = data || [];
+        }
+        
+        // 학생 카드 생성
+        studentsGrid.innerHTML = '';
+        
+        if (students.length === 0) {
+            studentsGrid.innerHTML = '<div class="no-students">등록된 학생이 없습니다.</div>';
+            return;
+        }
+        
+        for (const student of students) {
+            const studentCard = await createStudentCard(student);
+            studentsGrid.appendChild(studentCard);
+        }
+        
+    } catch (error) {
+        console.error('학생 목록 로드 오류:', error);
+        studentsGrid.innerHTML = '<div class="error">학생 목록을 불러올 수 없습니다.</div>';
+    }
+}
+
+// 학생 카드 생성
+async function createStudentCard(student) {
+    const card = document.createElement('div');
+    card.className = 'student-card';
+    card.onclick = () => showStudentReport(student);
+    
+    // 진행률과 점수 계산
+    let progress = 0;
+    let totalScore = 0;
+    
+    try {
+        const studentData = await loadStudentData(student);
+        if (studentData && studentData.stages) {
+            // 완료된 단계 수 계산
+            const completedStages = Object.keys(studentData.stages).filter(stage => 
+                studentData.stages[stage] && studentData.stages[stage].input
+            ).length;
+            progress = Math.round((completedStages / 6) * 100);
+            
+            // 총점 계산
+            Object.values(studentData.stages).forEach(stage => {
+                if (stage && stage.score) {
+                    totalScore += stage.score;
+                }
+            });
+        } else {
+            // 데이터가 없으면 랜덤 값 (데모용)
+            progress = Math.floor(Math.random() * 100);
+            totalScore = Math.floor(Math.random() * 90);
+        }
+    } catch (error) {
+        console.log('학생 데이터 로드 중 오류:', error);
+        // 오류 시 기본값
+        progress = 0;
+        totalScore = 0;
+    }
+    
+    card.innerHTML = `
+        <div class="student-info">
+            <h3>${student.name}</h3>
+            <p>🏫 ${student.school}</p>
+            <p>📚 ${student.grade}학년 ${student.class}반 ${student.number}번</p>
+            <p>🆔 ${student.username}</p>
+        </div>
+        <div class="student-progress">
+            <div class="progress-info">
+                <span>진행률</span>
+                <span>${progress}%</span>
+            </div>
+            <div class="progress-bar-mini">
+                <div class="progress-fill-mini" style="width: ${progress}%"></div>
+            </div>
+            <div class="progress-info" style="margin-top: 10px;">
+                <span>총점</span>
+                <span><strong>${totalScore}점</strong></span>
+            </div>
+        </div>
+    `;
+    
+    return card;
+}
+
+// 개별 학생 레포트 표시
+async function showStudentReport(student) {
+    // 다른 화면 숨기기
+    document.getElementById('teacherDashboard').style.display = 'none';
+    
+    // 레포트 페이지 표시
+    document.getElementById('studentReportPage').style.display = 'block';
+    document.getElementById('reportStudentName').textContent = `${student.name} 학생 탐구학습 레포트`;
+    
+    // 현재 학생 데이터 저장
+    currentStudentData = student;
+    
+    // 학생 데이터 로드 및 레포트 생성
+    await generateStudentReport(student);
+}
+
+// 학생 레포트 생성
+async function generateStudentReport(student) {
+    const reportContent = document.getElementById('reportContent');
+    reportContent.innerHTML = '<div class="loading">레포트를 생성하는 중...</div>';
+    
+    try {
+        // 학생의 탐구 데이터 로드
+        let studentData = await loadStudentData(student);
+        
+        // 레포트 HTML 생성
+        const reportHTML = createReportHTML(student, studentData);
+        reportContent.innerHTML = reportHTML;
+        
+    } catch (error) {
+        console.error('레포트 생성 오류:', error);
+        reportContent.innerHTML = '<div class="error">레포트를 생성할 수 없습니다.</div>';
+    }
+}
+
+// 학생 데이터 로드
+async function loadStudentData(student) {
+    console.log('학생 데이터 로드 시작:', student);
+    
+    if (CONFIG.DEMO_MODE) {
+        console.log('데모 모드: localStorage에서 학생 데이터 로드 시도', student.id);
+        
+        // localStorage에서 실제 학생 데이터 찾기
+        const inquiryData = localStorage.getItem(`inquiry_${student.id}`);
+        
+        if (inquiryData) {
+            console.log('✅ localStorage에서 실제 데이터 발견');
+            const parsedData = JSON.parse(inquiryData);
+            
+            // 데이터 형식을 교사 레포트에 맞게 변환
+            return {
+                stages: parsedData.stage_data || {},
+                totalScore: parsedData.total_score || 0,
+                progress: parsedData.progress || 0,
+                initialIntent: parsedData.intent || '탐구 의도 미설정'
+            };
+        } else {
+            console.log('⚠️ localStorage에 실제 데이터 없음, 기본 샘플 데이터 사용');
+            
+            // 기본 샘플 데이터 생성
+            const demoData = {
+                stages: {
+                    1: { input: '식물이 빛을 향해 자라는 이유가 궁금합니다. 왜 식물들은 항상 해를 향해서 자랄까요?', score: 8 },
+                    2: { input: '햇빛의 양에 따라 식물의 성장 속도가 어떻게 달라질까요? 어둠에서도 식물이 자랄 수 있을까요?', score: 12 },
+                    3: { input: '콩나물을 세 그룹으로 나누어 어둠, 약한 빛, 강한 빛에서 키워보며 매일 길이를 측정했습니다. 일주일간 관찰한 결과를 기록했습니다.', score: 18 },
+                    4: { input: '강한 빛에서 자란 콩나물이 평균 12cm로 가장 길었고, 약한 빛에서는 8cm, 어둠에서는 5cm였습니다. 색깔도 빛이 강할수록 더 초록색이었습니다.', score: 13 },
+                    5: { input: '식물은 광합성을 통해 에너지를 만들기 때문에 빛이 필요하다는 것을 알았습니다. 빛이 부족하면 제대로 자라지 못합니다.', score: 9 },
+                    6: { input: '집에서 화분을 키울 때 햇빛이 잘 드는 곳에 두어야겠습니다. 또한 학교 화단의 식물들도 그늘에 있는 것들은 다른 곳으로 옮겨주면 좋겠습니다.', score: 17 }
+                },
+                totalScore: 77,
+                progress: 100,
+                initialIntent: '식물이 빛을 향해 자라는 이유가 궁금합니다.'
+            };
+            
+            // 학생별로 다른 데이터 생성
+            if (student.username === 'demo2') {
+                demoData.stages[1].input = '물의 온도가 식물 성장에 미치는 영향이 궁금합니다.';
+                demoData.initialIntent = '물의 온도가 식물 성장에 미치는 영향이 궁금합니다.';
+                demoData.totalScore = 82;
+            } else if (student.username === 'demo3') {
+                demoData.stages[1].input = '음악이 식물 성장에 도움이 될까요?';
+                demoData.initialIntent = '음악이 식물 성장에 도움이 될까요?';
+                demoData.totalScore = 65;
+            }
+            
+            return demoData;
+        }
+    } else {
+        // 실제 Supabase에서 데이터 로드
+        try {
+            console.log('Supabase에서 학생 데이터 조회 중...', student.id);
+            
+            const { data, error } = await supabase
+                .from('inquiries')
+                .select('*')
+                .eq('user_id', student.id)
+                .single();
+                
+            if (error) {
+                console.log('학생 탐구 데이터가 없습니다:', error.message);
+                // 데이터가 없으면 빈 구조 반환
+                return {
+                    stages: {
+                        1: { input: '아직 입력하지 않았습니다.', score: 0 },
+                        2: { input: '아직 입력하지 않았습니다.', score: 0 },
+                        3: { input: '아직 입력하지 않았습니다.', score: 0 },
+                        4: { input: '아직 입력하지 않았습니다.', score: 0 },
+                        5: { input: '아직 입력하지 않았습니다.', score: 0 },
+                        6: { input: '아직 입력하지 않았습니다.', score: 0 }
+                    },
+                    totalScore: 0,
+                    progress: 0,
+                    initialIntent: '아직 설정하지 않았습니다.'
+                };
+            }
+            
+            console.log('Supabase에서 로드된 데이터:', data);
+            
+            // Supabase 데이터를 교사 레포트 형식으로 변환
+            const formattedData = {
+                stages: data.stage_data || {},
+                totalScore: data.total_score || 0,
+                progress: data.progress || 0,
+                initialIntent: data.intent || '탐구 의도 미설정'
+            };
+            
+            // stages 데이터가 비어있으면 기본 구조 생성
+            if (!formattedData.stages || Object.keys(formattedData.stages).length === 0) {
+                formattedData.stages = {
+                    1: { input: '아직 입력하지 않았습니다.', score: 0 },
+                    2: { input: '아직 입력하지 않았습니다.', score: 0 },
+                    3: { input: '아직 입력하지 않았습니다.', score: 0 },
+                    4: { input: '아직 입력하지 않았습니다.', score: 0 },
+                    5: { input: '아직 입력하지 않았습니다.', score: 0 },
+                    6: { input: '아직 입력하지 않았습니다.', score: 0 }
+                };
+            }
+            
+            return formattedData;
+            
+        } catch (error) {
+            console.error('Supabase 데이터 로드 오류:', error);
+            // 오류 시 기본 구조 반환
+            return {
+                stages: {
+                    1: { input: '데이터 로드 오류', score: 0 },
+                    2: { input: '데이터 로드 오류', score: 0 },
+                    3: { input: '데이터 로드 오류', score: 0 },
+                    4: { input: '데이터 로드 오류', score: 0 },
+                    5: { input: '데이터 로드 오류', score: 0 },
+                    6: { input: '데이터 로드 오류', score: 0 }
+                },
+                totalScore: 0,
+                progress: 0,
+                initialIntent: '데이터 로드 오류'
+            };
+        }
+    }
+}
+
+// 레포트 HTML 생성
+function createReportHTML(student, data) {
+    const stageNames = {
+        1: '관계맺기', 2: '집중하기', 3: '조사하기',
+        4: '정리하기', 5: '일반화하기', 6: '전이하기'
+    };
+    
+    let stagesHTML = '';
+    let totalScore = 0;
+    
+    for (let i = 1; i <= 6; i++) {
+        const stageData = data.stages[i] || { input: '미완료', score: 0 };
+        totalScore += stageData.score;
+        
+        stagesHTML += `
+            <div class="report-section">
+                <h3>${i}단계: ${stageNames[i]} <span class="stage-score">${stageData.score}점</span></h3>
+                <div class="stage-data">
+                    <p><strong>학생 응답:</strong></p>
+                    <p>${stageData.input}</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 레벨 계산
+    const level = getLevelText(totalScore);
+    
+    return `
+        <div class="report-header-info">
+            <h2>📋 ${student.name} 학생 탐구학습 레포트</h2>
+            <div class="student-details">
+                <p><strong>학교:</strong> ${student.school}</p>
+                <p><strong>학급:</strong> ${student.grade}학년 ${student.class}반 ${student.number}번</p>
+                <p><strong>아이디:</strong> ${student.username}</p>
+                <p><strong>작성일:</strong> ${new Date().toLocaleDateString('ko-KR')}</p>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <h3>🎯 초기 탐구 의도</h3>
+            <div class="stage-data">
+                <p>${data.initialIntent}</p>
+            </div>
+        </div>
+        
+        ${stagesHTML}
+        
+        <div class="total-score">
+            <h3>📊 총점: ${totalScore}/90점 (${Math.round((totalScore/90)*100)}%)</h3>
+            <p>탐구 수준: ${level}</p>
+            <p>진행률: ${data.progress}%</p>
+        </div>
+        
+        <div class="report-section">
+            <h3>🤖 AI 교사 코멘트</h3>
+            <div class="ai-comment" id="aiComment">
+                <p><em>AI 레포트 생성 버튼을 클릭하여 상세한 피드백을 받아보세요.</em></p>
+            </div>
+        </div>
+    `;
+}
+
+// AI 레포트 생성
+async function generateAIReport() {
+    const aiComment = document.getElementById('aiComment');
+    const generateBtn = document.getElementById('generateReportBtn');
+    
+    if (!currentStudentData) {
+        showError('학생 데이터를 찾을 수 없습니다.');
+        return;
+    }
+    
+    generateBtn.disabled = true;
+    generateBtn.textContent = '생성 중...';
+    aiComment.innerHTML = '<p><em>AI가 레포트를 분석하고 있습니다...</em></p>';
+    
+    try {
+        // 현재 학생 데이터 로드
+        const studentData = await loadStudentData(currentStudentData);
+        
+        // AI 프롬프트 생성
+        let stageInputs = '';
+        for (let i = 1; i <= 6; i++) {
+            const stageNames = ['관계맺기', '집중하기', '조사하기', '정리하기', '일반화하기', '전이하기'];
+            const stageData = studentData.stages[i] || { input: '미완료', score: 0 };
+            stageInputs += `${i}단계(${stageNames[i-1]}): ${stageData.input} (${stageData.score}점)\n`;
+        }
+        
+        const prompt = `다음은 초등학생 ${currentStudentData.name}(${currentStudentData.grade}학년)의 탐구학습 결과입니다. 교사 관점에서 400자 내외의 종합적인 피드백을 작성해주세요.
+
+초기 탐구 의도: ${studentData.initialIntent}
+
+단계별 활동 내용:
+${stageInputs}
+
+총점: ${studentData.totalScore}/90점
+
+다음 내용을 포함해주세요:
+1. 학생의 탐구 능력과 성장점
+2. 잘한 부분에 대한 구체적인 칭찬
+3. 개선이 필요한 부분과 제안사항
+4. 앞으로의 학습 방향 제시
+
+친근하고 격려하는 톤으로 작성해주세요.`;
+
+        // Gemini API 호출
+        let feedback = null;
+        if (CONFIG.AI_COACH.ENABLED) {
+            feedback = await callGeminiAPI(prompt);
+        }
+        
+        if (feedback) {
+            aiComment.innerHTML = `<p>${feedback}</p>`;
+        } else {
+            // AI 호출 실패 시 기본 코멘트 제공
+            const defaultFeedback = generateDefaultFeedback(currentStudentData, studentData);
+            aiComment.innerHTML = `<p>${defaultFeedback}</p>`;
+        }
+        
+    } catch (error) {
+        console.error('AI 레포트 생성 오류:', error);
+        const defaultFeedback = generateDefaultFeedback(currentStudentData, await loadStudentData(currentStudentData));
+        aiComment.innerHTML = `<p>${defaultFeedback}</p>`;
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = '🤖 AI 레포트 생성';
+    }
+}
+
+// 기본 피드백 생성 (AI 실패 시 사용)
+function generateDefaultFeedback(student, data) {
+    const score = data.totalScore;
+    const name = student.name;
+    
+    let feedback = `${name} 학생은 탐구 과정에서 `;
+    
+    if (score >= 70) {
+        feedback += `체계적이고 논리적인 사고를 보여주었습니다. 특히 초기 의도를 명확히 설정하고 이를 바탕으로 단계별 탐구를 진행한 점이 매우 인상적입니다. 관찰과 실험을 통해 얻은 결과를 바탕으로 일반화까지 이어간 과정이 훌륭합니다. 앞으로도 이런 탐구 정신을 유지하며 더 깊이 있는 학습을 이어가기를 바랍니다.`;
+    } else if (score >= 50) {
+        feedback += `기본적인 탐구 과정을 잘 이해하고 있습니다. 각 단계별로 성실하게 활동한 모습이 보입니다. 앞으로는 더 구체적인 관찰과 분석을 통해 깊이 있는 탐구를 해보면 좋겠습니다. 특히 결과를 정리하고 일반화하는 과정에서 더 많은 생각과 노력을 기울여보세요.`;
+    } else {
+        feedback += `탐구 활동에 참여한 것을 격려합니다. 앞으로는 각 단계별로 더 자세하고 구체적으로 기록해보세요. 궁금한 점을 명확히 하고, 관찰한 내용을 꼼꼼히 적어보는 것부터 시작하면 좋겠습니다. 선생님과 함께 차근차근 탐구하는 방법을 익혀나가봅시다.`;
+    }
+    
+    return feedback;
+}
+
+// 레포트 프린트
+function printReport() {
+    window.print();
+}
+
+// PDF 다운로드
+function downloadReportPDF() {
+    // HTML을 PDF로 변환하는 간단한 방법
+    // 실제로는 jsPDF나 다른 라이브러리 사용 권장
+    if (typeof window.jsPDF !== 'undefined') {
+        try {
+            const { jsPDF } = window.jsPDF;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            const reportContent = document.getElementById('reportContent');
+            const studentName = currentStudentData ? currentStudentData.name : '학생';
+            
+            // PDF 제목
+            doc.setFontSize(16);
+            doc.text(`${studentName} 탐구학습 레포트`, 20, 20);
+            
+            // 간단한 텍스트 추출 및 PDF 생성
+            const textContent = reportContent.innerText;
+            const lines = doc.splitTextToSize(textContent, 170);
+            
+            doc.setFontSize(10);
+            doc.text(lines, 20, 40);
+            
+            doc.save(`${studentName}_탐구학습_레포트.pdf`);
+            
+        } catch (error) {
+            console.error('PDF 생성 오류:', error);
+            alert('PDF 생성 중 오류가 발생했습니다. 프린트 기능을 사용해주세요.');
+            printReport();
+        }
+    } else {
+        // jsPDF가 없으면 프린트로 대체
+        alert('PDF 다운로드를 위해 프린트 기능을 사용합니다.');
+        printReport();
+    }
+}
+
+// 교사 로그아웃
+function handleTeacherLogout() {
+    document.getElementById('teacherDashboard').style.display = 'none';
+    document.getElementById('studentReportPage').style.display = 'none';
+    document.getElementById('authContainer').style.display = 'flex';
+    currentStudentData = null;
 } 

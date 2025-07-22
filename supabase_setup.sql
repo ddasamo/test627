@@ -15,15 +15,14 @@ CREATE TABLE profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 2. 탐구 활동 테이블
+-- 2. 탐구 활동 테이블 (수정된 버전)
 DROP TABLE IF EXISTS inquiries CASCADE;
 CREATE TABLE inquiries (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES profiles(id) ON DELETE CASCADE,
-    intent TEXT NOT NULL,
+    intent TEXT DEFAULT '탐구 의도 미설정',
     stage INTEGER DEFAULT 1 CHECK (stage BETWEEN 1 AND 6),
     stage_data JSONB DEFAULT '{}',
-    score INTEGER DEFAULT 0,
     total_score INTEGER DEFAULT 0,
     progress FLOAT DEFAULT 0.0,
     completed BOOLEAN DEFAULT FALSE,
@@ -70,30 +69,26 @@ CREATE TRIGGER update_inquiries_updated_at BEFORE UPDATE ON inquiries
 
 -- ===== Row Level Security (RLS) 정책 =====
 
--- profiles 테이블 RLS
+-- profiles 테이블 RLS (간단한 정책)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- 사용자는 자신의 프로필만 조회/수정 가능
-CREATE POLICY "Users can view own profile" ON profiles
-    FOR SELECT USING (true); -- 모든 사용자가 프로필 조회 가능 (로그인 용도)
+-- 모든 사용자가 프로필을 조회/생성할 수 있도록 허용 (로그인/회원가입용)
+CREATE POLICY "Allow all operations on profiles" ON profiles
+    FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY "Users can update own profile" ON profiles
-    FOR UPDATE USING (id = (SELECT id FROM profiles WHERE username = current_user));
-
-CREATE POLICY "Users can insert own profile" ON profiles
-    FOR INSERT WITH CHECK (true); -- 회원가입 허용
-
--- inquiries 테이블 RLS
+-- inquiries 테이블 RLS (간단한 정책)  
 ALTER TABLE inquiries ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own inquiries" ON inquiries
-    FOR ALL USING (user_id = (SELECT id FROM profiles WHERE username = current_user));
+-- 모든 사용자가 탐구 데이터를 조회/생성/수정할 수 있도록 허용
+CREATE POLICY "Allow all operations on inquiries" ON inquiries
+    FOR ALL USING (true) WITH CHECK (true);
 
--- reflections 테이블 RLS
+-- reflections 테이블 RLS (간단한 정책)
 ALTER TABLE reflections ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own reflections" ON reflections
-    FOR ALL USING (user_id = (SELECT id FROM profiles WHERE username = current_user));
+-- 모든 사용자가 성찰 데이터를 조회/생성/수정할 수 있도록 허용
+CREATE POLICY "Allow all operations on reflections" ON reflections
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- ===== 샘플 데이터 (테스트용) =====
 INSERT INTO profiles (username, password, name, school, grade, class, number) VALUES
@@ -102,4 +97,4 @@ INSERT INTO profiles (username, password, name, school, grade, class, number) VA
 ('student2', '5678', '이학생', '부산초등학교', 6, 3, 12);
 
 -- ===== 설정 완료 메시지 =====
-SELECT 'Supabase 데이터베이스 설정이 완료되었습니다!' as message; 각 과정별로 학생들이 탐구 질문이나  조사 결과, 보고서를 비롯해서 일반화된 문장 등을 입력하면 이를 분석하는 프로그램을 만들려고 합니다. 이때 학생들이 처음에 탐구의 목표로 정한 의도에 맞게 조사하거나 결과보고서를 작성하는지  AI 가 학생들이 입력한 것을 바탕으로 피드백을 하려고 합니다 가능할까요?
+SELECT 'Supabase 데이터베이스 설정이 완료되었습니다!' as message;
