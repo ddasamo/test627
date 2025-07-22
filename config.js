@@ -19,7 +19,7 @@ const CONFIG = {
         TEMPERATURE: 0.7,
         
         // AI 코치 활성화 여부
-        ENABLED: true,
+        ENABLED: false,
         
         // 피드백 기준 점수
         FEEDBACK_THRESHOLDS: {
@@ -240,4 +240,9 @@ if (typeof module !== 'undefined' && module.exports) {
         getIntentMatchClass,
         isDebugMode
     };
-} 
+}
+
+// 디버깅: CONFIG 로드 확인
+console.log('config.js 로드 완료');
+console.log('DEMO_MODE 설정:', CONFIG.DEMO_MODE);
+console.log('AI_COACH.ENABLED:', CONFIG.AI_COACH.ENABLED); 

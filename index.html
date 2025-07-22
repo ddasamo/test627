@@ -18,43 +18,83 @@
             </div>
 
             <!-- 로그인 폼 -->
-            <form id="loginForm">
+            <form id="loginForm" class="auth-form">
+                <h2>로그인</h2>
                 <div class="form-group">
-                    <label for="loginEmail">이메일</label>
-                    <input type="email" id="loginEmail" class="form-input" placeholder="이메일을 입력하세요" required>
+                    <label for="loginUsername">아이디</label>
+                    <input type="text" id="loginUsername" class="form-input" placeholder="아이디를 입력하세요" required>
                 </div>
                 <div class="form-group">
                     <label for="loginPassword">비밀번호</label>
                     <input type="password" id="loginPassword" class="form-input" placeholder="비밀번호를 입력하세요" required>
                 </div>
                 <button type="submit" class="btn-primary">로그인</button>
+                <p class="switch-form">계정이 없으신가요? <span onclick="showSignupForm()">회원가입</span></p>
             </form>
 
             <!-- 회원가입 폼 -->
-            <form id="signupForm" style="display: none;">
+            <form id="signupForm" class="auth-form" style="display: none;">
+                <h2>회원가입</h2>
+                <div class="form-group">
+                    <label for="signupSchool">학교</label>
+                    <input type="text" id="signupSchool" class="form-input" placeholder="학교명을 입력하세요" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="signupGrade">학년</label>
+                        <select id="signupGrade" class="form-input" required>
+                            <option value="">선택하세요</option>
+                            <option value="3">3학년</option>
+                            <option value="4">4학년</option>
+                            <option value="5">5학년</option>
+                            <option value="6">6학년</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupClass">반</label>
+                        <select id="signupClass" class="form-input" required>
+                            <option value="">선택하세요</option>
+                            <option value="1">1반</option>
+                            <option value="2">2반</option>
+                            <option value="3">3반</option>
+                            <option value="4">4반</option>
+                            <option value="5">5반</option>
+                            <option value="6">6반</option>
+                            <option value="7">7반</option>
+                            <option value="8">8반</option>
+                            <option value="9">9반</option>
+                            <option value="10">10반</option>
+                            <option value="11">11반</option>
+                            <option value="12">12반</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupNumber">번호</label>
+                        <input type="number" id="signupNumber" class="form-input" placeholder="번호" min="1" max="50" required>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="signupName">이름</label>
                     <input type="text" id="signupName" class="form-input" placeholder="이름을 입력하세요" required>
                 </div>
                 <div class="form-group">
-                    <label for="signupEmail">이메일</label>
-                    <input type="email" id="signupEmail" class="form-input" placeholder="이메일을 입력하세요" required>
+                    <label for="signupUsername">아이디</label>
+                    <input type="text" id="signupUsername" class="form-input" placeholder="영어, 숫자만 사용 가능" pattern="[a-zA-Z0-9]+" required>
                 </div>
                 <div class="form-group">
                     <label for="signupPassword">비밀번호</label>
-                    <input type="password" id="signupPassword" class="form-input" placeholder="비밀번호를 입력하세요" required>
+                    <input type="password" id="signupPassword" class="form-input" placeholder="4자리 이상 숫자" pattern="[0-9]{4,}" required>
                 </div>
-                <div class="form-group">
-                    <label for="signupClass">학급</label>
-                    <input type="text" id="signupClass" class="form-input" placeholder="예: 3학년 2반" required>
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="privacyAgree" required>
+                        <span class="checkmark"></span>
+                        개인정보 수집 및 이용에 동의합니다
+                    </label>
                 </div>
                 <button type="submit" class="btn-primary">회원가입</button>
+                <p class="switch-form">이미 계정이 있으신가요? <span onclick="showLoginForm()">로그인</span></p>
             </form>
-
-            <div class="switch-form">
-                <span id="switchText">계정이 없으신가요?</span>
-                <a href="#" id="switchLink">회원가입</a>
-            </div>
 
             <div class="error-message" id="errorMessage"></div>
             <div class="success-message" id="successMessage"></div>
@@ -62,132 +102,223 @@
         </div>
     </div>
 
-    <!-- 메인 앱 화면 -->
-    <div class="main-app" id="mainApp">
-        <div class="container">
-            <div class="header">
-                <div class="header-left">
-                    <h1>🎯 의도기반 탐구학습</h1>
-                    <p>당신의 탐구 의도를 끝까지 지켜나가세요!</p>
-                </div>
-                <div class="user-info">
-                    <div class="user-name" id="userName">사용자님</div>
-                    <div class="user-class" id="userClass">학급 정보</div>
-                    <button class="logout-btn" onclick="logout()">로그아웃</button>
-                </div>
+    <!-- 메인 애플리케이션 -->
+    <div id="mainApp" style="display: none;">
+        <!-- 헤더 -->
+        <div class="header">
+            <div class="header-left">
+                <h1>🔬 의도기반 탐구학습</h1>
             </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div id="userName">사용자님</div>
+                    <div id="userClass">학급 정보</div>
+                </div>
+                <button class="logout-btn" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
 
-            <div class="score-board">
-                <div class="score-container">
-                    <div>
-                        <div class="score-display" id="totalScore">0점</div>
-                        <div id="levelDisplay">⭐⭐⭐⭐☆ 탐구 숙련자</div>
+        <div class="main-layout">
+            <!-- 왼쪽 사이드바 (점수 및 진행상황) -->
+            <div class="sidebar">
+                <div class="score-section">
+                    <div class="total-score">
+                        <div class="score-number" id="totalScore">0점</div>
+                        <div class="score-label">⭐⭐⭐⭐⭐ 탐구 숙련자</div>
                     </div>
-                    <div>
-                        <div style="font-size: 1.2em; margin-bottom: 10px;">진행률</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressBar" style="width: 0%"></div>
-                        </div>
-                        <div id="progressText">0%</div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        <div class="progress-text" id="progressText">0%</div>
                     </div>
                 </div>
-                
+
                 <div class="intent-tracker">
-                    <h3>🎯 초기 탐구 의도</h3>
-                    <p id="initialIntent">아직 설정되지 않았습니다.</p>
-                    <div class="intent-match">
-                        <div class="match-indicator" id="matchIndicator"></div>
-                        <span id="matchText">의도 일치도: 0%</span>
+                    <div class="intent-header">
+                        <span class="intent-icon">🎯</span>
+                        <span class="intent-title">초기 탐구 의도</span>
                     </div>
+                    <div class="intent-content" id="intentDisplay">
+                        아직 설정되지 않았습니다.
+                    </div>
+                    <div class="intent-match">
+                        <span class="match-label">🟢 의도 일치도:</span>
+                        <span class="match-percentage" id="intentMatch">0%</span>
+                    </div>
+                </div>
+
+                <div class="ai-coach-section">
                     <div class="ai-coach-status" id="aiCoachStatus">🤖 AI 코치 준비 중...</div>
                 </div>
+
+                <!-- 단계 네비게이션 -->
+                <div class="stage-navigation">
+                    <h3>탐구 단계</h3>
+                    <div class="nav-stages">
+                        <button class="nav-stage active" data-stage="1" onclick="showStage(1)">
+                            <span class="stage-number">1</span>
+                            <span class="stage-name">관계맺기</span>
+                            <span class="stage-status" id="navStatus1">●</span>
+                        </button>
+                        <button class="nav-stage" data-stage="2" onclick="showStage(2)">
+                            <span class="stage-number">2</span>
+                            <span class="stage-name">집중하기</span>
+                            <span class="stage-status" id="navStatus2">○</span>
+                        </button>
+                        <button class="nav-stage" data-stage="3" onclick="showStage(3)">
+                            <span class="stage-number">3</span>
+                            <span class="stage-name">조사하기</span>
+                            <span class="stage-status" id="navStatus3">○</span>
+                        </button>
+                        <button class="nav-stage" data-stage="4" onclick="showStage(4)">
+                            <span class="stage-number">4</span>
+                            <span class="stage-name">정리하기</span>
+                            <span class="stage-status" id="navStatus4">○</span>
+                        </button>
+                        <button class="nav-stage" data-stage="5" onclick="showStage(5)">
+                            <span class="stage-number">5</span>
+                            <span class="stage-name">일반화하기</span>
+                            <span class="stage-status" id="navStatus5">○</span>
+                        </button>
+                        <button class="nav-stage" data-stage="6" onclick="showStage(6)">
+                            <span class="stage-number">6</span>
+                            <span class="stage-name">전이하기</span>
+                            <span class="stage-status" id="navStatus6">○</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div class="stages-container">
-                <!-- 관계맺기 단계 -->
-                <div class="stage active" id="stage1">
+            <!-- 메인 컨텐츠 영역 -->
+            <div class="main-content">
+                <!-- 1단계: 관계맺기 -->
+                <div class="stage-page active" id="stage1">
                     <div class="stage-header">
-                        <div class="stage-title">1단계: 관계맺기 (Engaging)</div>
-                        <div class="stage-score" id="score1">0/10점</div>
+                        <h2>1단계: 관계맺기 (Engaging)</h2>
+                        <p class="stage-description">탐구 주제에 대한 호기심을 갖고 초기 의도를 설정합니다.</p>
                     </div>
-                    <p style="margin-bottom: 15px;">💭 무엇이 궁금한가요? 탐구하고 싶은 주제나 문제를 자유롭게 적어보세요.</p>
-                    <textarea class="input-area" id="input1" placeholder="예: 우리 학교 학생들이 점심시간에 도서관보다 운동장을 더 선호하는 이유가 궁금해요..."></textarea>
-                    <button class="btn" onclick="submitStage(1)">다음 단계로</button>
+                    <div class="stage-content">
+                        <div class="input-section">
+                            <label for="intent">🎯 탐구하고 싶은 주제나 궁금한 점을 적어보세요:</label>
+                            <textarea id="intent" class="input-area" placeholder="예: 왜 식물은 빛을 향해 자랄까? 어떤 조건에서 식물이 더 잘 자랄까?"></textarea>
+                        </div>
+                        <div class="stage-actions">
+                            <button class="btn-primary" onclick="submitStage(1)">다음 단계로</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 집중하기 단계 -->
-                <div class="stage" id="stage2">
+                <!-- 2단계: 집중하기 -->
+                <div class="stage-page" id="stage2">
                     <div class="stage-header">
-                        <div class="stage-title">2단계: 집중하기 (Focusing)</div>
-                        <div class="stage-score" id="score2">0/15점</div>
+                        <h2>2단계: 집중하기 (Focusing)</h2>
+                        <p class="stage-description">탐구 질문을 구체적으로 만들어 봅시다.</p>
                     </div>
-                    <p style="margin-bottom: 15px;">🎯 탐구 질문을 구체적으로 만들어보세요. 핵심 개념을 명확히 해주세요.</p>
-                    <textarea class="input-area" id="input2" placeholder="구체적인 탐구 질문을 작성해주세요..."></textarea>
-                    <button class="btn" onclick="submitStage(2)">다음 단계로</button>
+                    <div class="stage-content">
+                        <div class="input-section">
+                            <label for="question">🔍 구체적인 탐구 질문을 만들어보세요:</label>
+                            <textarea id="question" class="input-area" placeholder="예: 햇빛의 양에 따라 식물의 성장 속도가 어떻게 달라질까?"></textarea>
+                        </div>
+                        <div class="stage-actions">
+                            <button class="btn-secondary" onclick="showStage(1)">이전</button>
+                            <button class="btn-primary" onclick="submitStage(2)">다음 단계로</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 조사하기 단계 -->
-                <div class="stage" id="stage3">
+                <!-- 3단계: 조사하기 -->
+                <div class="stage-page" id="stage3">
                     <div class="stage-header">
-                        <div class="stage-title">3단계: 조사하기 (Exploring)</div>
-                        <div class="stage-score" id="score3">0/20점</div>
+                        <h2>3단계: 조사하기 (Exploring)</h2>
+                        <p class="stage-description">다양한 방법으로 정보를 수집하고 탐구해봅시다.</p>
                     </div>
-                    <p style="margin-bottom: 15px;">🔍 어떤 방법으로 조사할 계획인가요? 수집할 자료나 방법을 설명해주세요.</p>
-                    <textarea class="input-area" id="input3" placeholder="조사 방법과 계획을 자세히 적어주세요..."></textarea>
-                    <button class="btn" onclick="submitStage(3)">다음 단계로</button>
+                    <div class="stage-content">
+                        <div class="input-section">
+                            <label for="research">📚 조사한 내용이나 실험/관찰 결과를 적어보세요:</label>
+                            <textarea id="research" class="input-area" placeholder="예: 인터넷에서 찾은 자료, 실험 결과, 관찰한 내용 등"></textarea>
+                        </div>
+                        <div class="stage-actions">
+                            <button class="btn-secondary" onclick="showStage(2)">이전</button>
+                            <button class="btn-primary" onclick="submitStage(3)">다음 단계로</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 조직 및 정리하기 단계 -->
-                <div class="stage" id="stage4">
+                <!-- 4단계: 정리하기 -->
+                <div class="stage-page" id="stage4">
                     <div class="stage-header">
-                        <div class="stage-title">4단계: 조직 및 정리하기 (Organizing)</div>
-                        <div class="stage-score" id="score4">0/15점</div>
+                        <h2>4단계: 정리하기 (Organizing)</h2>
+                        <p class="stage-description">수집한 정보를 정리하고 분석해봅시다.</p>
                     </div>
-                    <p style="margin-bottom: 15px;">📊 수집한 정보를 어떻게 분류하고 정리했나요? 발견한 패턴이 있다면 설명해주세요.</p>
-                    <textarea class="input-area" id="input4" placeholder="정보 정리 결과와 발견한 패턴을 적어주세요..."></textarea>
-                    <button class="btn" onclick="submitStage(4)">다음 단계로</button>
+                    <div class="stage-content">
+                        <div class="input-section">
+                            <label for="organize">📊 조사한 내용을 정리하고 분석한 결과를 적어보세요:</label>
+                            <textarea id="organize" class="input-area" placeholder="예: 데이터 분석 결과, 패턴 발견, 중요한 발견사항 등"></textarea>
+                        </div>
+                        <div class="stage-actions">
+                            <button class="btn-secondary" onclick="showStage(3)">이전</button>
+                            <button class="btn-primary" onclick="submitStage(4)">다음 단계로</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 일반화하기 단계 -->
-                <div class="stage" id="stage5">
+                <!-- 5단계: 일반화하기 -->
+                <div class="stage-page" id="stage5">
                     <div class="stage-header">
-                        <div class="stage-title">5단계: 일반화하기 (Generalizing)</div>
-                        <div class="stage-score" id="score5">0/10점</div>
+                        <h2>5단계: 일반화하기 (Generalizing)</h2>
+                        <p class="stage-description">탐구 결과를 바탕으로 일반적인 원리나 법칙을 찾아봅시다.</p>
                     </div>
-                    <p style="margin-bottom: 15px;">💡 탐구 결과에서 어떤 일반적인 원리나 법칙을 발견했나요?</p>
-                    <textarea class="input-area" id="input5" placeholder="일반화된 결론이나 원리를 적어주세요..."></textarea>
-                    <button class="btn" onclick="submitStage(5)">다음 단계로</button>
+                    <div class="stage-content">
+                        <div class="input-section">
+                            <label for="generalize">🧠 탐구 결과를 바탕으로 일반화한 내용을 적어보세요:</label>
+                            <textarea id="generalize" class="input-area" placeholder="예: 발견한 법칙이나 원리, 결론 등"></textarea>
+                        </div>
+                        <div class="stage-actions">
+                            <button class="btn-secondary" onclick="showStage(4)">이전</button>
+                            <button class="btn-primary" onclick="submitStage(5)">다음 단계로</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 전이하기 단계 -->
-                <div class="stage" id="stage6">
+                <!-- 6단계: 전이하기 -->
+                <div class="stage-page" id="stage6">
                     <div class="stage-header">
-                        <div class="stage-title">6단계: 전이하기 (Transferring)</div>
-                        <div class="stage-score" id="score6">0/20점</div>
+                        <h2>6단계: 전이하기 (Transferring)</h2>
+                        <p class="stage-description">배운 내용을 다른 상황에 적용해봅시다.</p>
                     </div>
-                    <p style="margin-bottom: 15px;">🌟 학습한 내용을 다른 상황에 어떻게 적용할 수 있을까요?</p>
-                    <textarea class="input-area" id="input6" placeholder="다른 상황에의 적용 방안을 적어주세요..."></textarea>
-                    <button class="btn" onclick="submitStage(6)">탐구 완료</button>
+                    <div class="stage-content">
+                        <div class="input-section">
+                            <label for="transfer">🔄 배운 내용을 다른 상황에 어떻게 적용할 수 있는지 적어보세요:</label>
+                            <textarea id="transfer" class="input-area" placeholder="예: 실생활 적용 방법, 다른 분야와의 연결점 등"></textarea>
+                        </div>
+                        <div class="stage-actions">
+                            <button class="btn-secondary" onclick="showStage(5)">이전</button>
+                            <button class="btn-primary" onclick="submitStage(6)">탐구 완료</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- AI 피드백 컨테이너 -->
-    <div class="ai-feedback-container" id="aiFeedbackContainer">
-        <!-- AI 피드백 내용이 동적으로 삽입됩니다 -->
-    </div>
+        <!-- AI 피드백 컨테이너 -->
+        <div class="ai-feedback-container" id="aiFeedbackContainer">
+            <!-- AI 피드백 내용이 동적으로 삽입됩니다 -->
+        </div>
 
-    <!-- 성찰 팝업 -->
-    <div class="reflection-popup" id="reflectionPopup">
-        <div class="reflection-content">
-            <h2>🤔 성찰 시간</h2>
-            <div id="reflectionQuestion"></div>
-            <textarea class="input-area" id="reflectionAnswer" placeholder="성찰 질문에 대한 답변을 적어주세요..."></textarea>
-            <div style="text-align: center; margin-top: 20px;">
-                <button class="btn" onclick="submitReflection()">답변 완료</button>
+        <!-- 성찰 팝업 -->
+        <div class="reflection-popup" id="reflectionPopup">
+            <div class="reflection-content">
+                <h3>🤔 성찰하기</h3>
+                <p id="reflectionQuestion"></p>
+                <textarea id="reflectionAnswer" placeholder="자신의 생각을 자유롭게 적어보세요..."></textarea>
+                <div class="reflection-actions">
+                    <button class="btn-secondary" onclick="closeReflection()">건너뛰기</button>
+                    <button class="btn-primary" onclick="submitReflection()">제출하기</button>
+                </div>
             </div>
         </div>
+
+        <div class="error-message" id="errorMessage"></div>
     </div>
 
     <script src="config.js"></script>

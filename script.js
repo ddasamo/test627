@@ -2,17 +2,24 @@
 
 // ===== 전역 변수 =====
 let currentUser = null;
+let supabase = null;
 let currentStage = 1;
+let stageData = {
+    1: '', // 의도
+    2: '', // 질문
+    3: '', // 조사
+    4: '', // 정리
+    5: '', // 일반화
+    6: ''  // 전이
+};
 let totalScore = 0;
-let stageScores = [0, 0, 0, 0, 0, 0, 0];
-let initialIntent = "";
+let initialIntent = '';
 let reflectionData = [];
 let currentInquiryId = null;
 let aiCoachEnabled = false; // AI 코치 활성화 상태
 
 // ===== AI 탐구 코치 관련 변수 =====
 let currentAIFeedback = null;
-let stageNames = ['', '관계맺기', '집중하기', '조사하기', '조직및정리하기', '일반화하기', '전이하기'];
 
 // ===== 초기화 =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -31,9 +38,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // 터치 이벤트 최적화
     setupTouchOptimization();
+
+    // 앱 초기화
+    initializeApp();
 });
 
-// ===== 인증 관련 함수 =====
+// 설정 초기화 함수
+function initializeConfig() {
+    console.log('설정 초기화 시작 - 데모 모드:', CONFIG.DEMO_MODE);
+    
+    if (!CONFIG.DEMO_MODE && typeof window !== 'undefined' && window.supabase) {
+        try {
+            supabase = window.supabase.createClient(
+                CONFIG.SUPABASE_URL, 
+                CONFIG.SUPABASE_ANON_KEY
+            );
+            console.log('Supabase 클라이언트가 초기화되었습니다.');
+        } catch (error) {
+            console.error('Supabase 초기화 오류:', error);
+            console.log('데모 모드로 전환합니다.');
+            CONFIG.DEMO_MODE = true;
+        }
+    } else {
+        console.log('데모 모드로 실행됩니다. localStorage를 사용합니다.');
+    }
+}
 
 // 인증 상태 확인
 async function checkAuthState() {
@@ -100,116 +129,193 @@ function toggleAuthForms() {
 }
 
 // 로그인 처리
-async function handleLogin(e) {
-    e.preventDefault();
-    showLoading();
-
-    const email = document.getElementById('loginEmail').value.trim();
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
-
+    
+    if (!username || !password) {
+        showError('아이디와 비밀번호를 모두 입력해주세요.');
+        return;
+    }
+    
     try {
-        if (!email || !password) {
-            throw new Error(CONFIG.MESSAGES.ERRORS.EMPTY_FIELD);
-        }
-
         if (CONFIG.DEMO_MODE) {
-            // 데모 모드 로그인
-            currentUser = {
-                id: 'demo_user_' + Date.now(),
-                email: email,
-                name: email.split('@')[0],
-                class: '3학년 2반'
-            };
-            
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            showSuccessMessage(CONFIG.MESSAGES.LOGIN_SUCCESS);
-            
-            setTimeout(async () => {
+            // 데모 모드에서는 간단한 검증만
+            if (username === 'demo' && password === '1234') {
+                currentUser = {
+                    id: 'demo',
+                    username: 'demo',
+                    name: '데모 사용자',
+                    school: '데모 초등학교',
+                    grade: '5',
+                    class: '1',
+                    number: '1'
+                };
                 await showMainApp();
-                await loadUserProgress();
-            }, 1000);
-        } else {
-            // Supabase 로그인
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-
-            if (error) throw error;
-            
-            currentUser = data.user;
-            await showMainApp();
-            await loadUserProgress();
+                return;
+            } else {
+                showError('데모 모드에서는 아이디: demo, 비밀번호: 1234를 사용해주세요.');
+                return;
+            }
         }
-
+        
+        // Supabase를 사용한 실제 로그인
+        // profiles 테이블에서 아이디로 사용자 검색
+        const { data: profiles, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('username', username)
+            .single();
+            
+        if (profileError || !profiles) {
+            showError('존재하지 않는 아이디입니다.');
+            return;
+        }
+        
+        // 비밀번호 확인 (실제 프로덕션에서는 해시된 비밀번호와 비교해야 함)
+        if (profiles.password !== password) {
+            showError('비밀번호가 일치하지 않습니다.');
+            return;
+        }
+        
+        // 로그인 성공
+        currentUser = {
+            id: profiles.id,
+            username: profiles.username,
+            name: profiles.name,
+            school: profiles.school,
+            grade: profiles.grade,
+            class: profiles.class,
+            number: profiles.number
+        };
+        
+        console.log('로그인 성공:', currentUser);
+        await showMainApp();
+        
     } catch (error) {
-        showErrorMessage(error.message || CONFIG.MESSAGES.ERRORS.LOGIN_FAILED);
-    } finally {
-        hideLoading();
+        console.error('로그인 오류:', error);
+        showError('로그인 중 오류가 발생했습니다.');
     }
 }
 
 // 회원가입 처리
-async function handleSignup(e) {
-    e.preventDefault();
-    showLoading();
-
+async function handleSignup(event) {
+    event.preventDefault();
+    
+    const school = document.getElementById('signupSchool').value.trim();
+    const grade = document.getElementById('signupGrade').value;
+    const classNum = document.getElementById('signupClass').value;
+    const number = document.getElementById('signupNumber').value;
     const name = document.getElementById('signupName').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
+    const username = document.getElementById('signupUsername').value.trim();
     const password = document.getElementById('signupPassword').value;
-    const className = document.getElementById('signupClass').value.trim();
-
+    const privacyAgree = document.getElementById('privacyAgree').checked;
+    
+    // 유효성 검사
+    if (!school || !grade || !classNum || !number || !name || !username || !password) {
+        showError('모든 필드를 입력해주세요.');
+        return;
+    }
+    
+    if (!privacyAgree) {
+        showError('개인정보 수집 및 이용에 동의해주세요.');
+        return;
+    }
+    
+    // 아이디 유효성 검사 (영어, 숫자만)
+    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+        showError('아이디는 영어와 숫자만 사용할 수 있습니다.');
+        return;
+    }
+    
+    // 비밀번호 유효성 검사 (4자리 이상 숫자)
+    if (!/^[0-9]{4,}$/.test(password)) {
+        showError('비밀번호는 4자리 이상의 숫자여야 합니다.');
+        return;
+    }
+    
+    // 번호 유효성 검사
+    const studentNumber = parseInt(number);
+    if (studentNumber < 1 || studentNumber > 50) {
+        showError('번호는 1부터 50 사이의 숫자여야 합니다.');
+        return;
+    }
+    
     try {
-        if (!name || !email || !password || !className) {
-            throw new Error(CONFIG.MESSAGES.ERRORS.EMPTY_FIELD);
-        }
-
         if (CONFIG.DEMO_MODE) {
-            // 데모 모드 회원가입
-            showSuccessMessage(CONFIG.MESSAGES.SIGNUP_SUCCESS);
-            
-            // 로그인 폼으로 전환
-            toggleAuthForms();
-            
-            // 로그인 폼에 이메일 자동 입력
-            document.getElementById('loginEmail').value = email;
-        } else {
-            // Supabase 회원가입
-            const { data, error } = await supabase.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    data: {
-                        name: name,
-                        class: className
-                    }
-                }
-            });
-
-            if (error) throw error;
-            
-            // 사용자 프로필 저장 (회원가입 성공 후)
-            if (data.user) {
-                const { error: profileError } = await supabase.from(CONFIG.DB_TABLES.PROFILES).insert({
-                    id: data.user.id,
-                    name: name,
-                    class: className,
-                    email: email
-                });
-
-                if (profileError) {
-                    console.error('프로필 저장 오류:', profileError);
-                    // 프로필 저장 실패해도 회원가입은 성공한 상태
-                }
-            }
-
-            showSuccessMessage(CONFIG.MESSAGES.SIGNUP_SUCCESS);
+            // 데모 모드에서는 localStorage에 저장
+            const userData = {
+                id: Date.now().toString(),
+                username,
+                name,
+                school,
+                grade,
+                class: classNum,
+                number: studentNumber,
+                password
+            };
+            localStorage.setItem('demoUser', JSON.stringify(userData));
+            currentUser = userData;
+            await showMainApp();
+            return;
         }
-
+        
+        // Supabase를 사용한 실제 회원가입
+        // 먼저 중복 아이디 확인
+        const { data: existingUser, error: checkError } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('username', username)
+            .single();
+            
+        if (existingUser) {
+            showError('이미 사용 중인 아이디입니다.');
+            return;
+        }
+        
+        // 새 사용자 생성
+        const { data: newUser, error: insertError } = await supabase
+            .from('profiles')
+            .insert([
+                {
+                    username,
+                    password, // 실제 프로덕션에서는 비밀번호를 해시해야 함
+                    name,
+                    school,
+                    grade: parseInt(grade),
+                    class: parseInt(classNum),
+                    number: studentNumber,
+                    created_at: new Date().toISOString()
+                }
+            ])
+            .select()
+            .single();
+            
+        if (insertError) {
+            console.error('회원가입 오류:', insertError);
+            showError('회원가입 중 오류가 발생했습니다.');
+            return;
+        }
+        
+        // 회원가입 성공
+        currentUser = {
+            id: newUser.id,
+            username: newUser.username,
+            name: newUser.name,
+            school: newUser.school,
+            grade: newUser.grade,
+            class: newUser.class,
+            number: newUser.number
+        };
+        
+        console.log('회원가입 성공:', currentUser);
+        await showMainApp();
+        
     } catch (error) {
-        showErrorMessage(error.message || CONFIG.MESSAGES.ERRORS.SIGNUP_FAILED);
-    } finally {
-        hideLoading();
+        console.error('회원가입 오류:', error);
+        showError('회원가입 중 오류가 발생했습니다.');
     }
 }
 
@@ -237,48 +343,271 @@ async function logout() {
 
 // 메인 앱 표시
 async function showMainApp() {
-    document.getElementById('authContainer').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    
-    // 사용자 정보 표시
-    let userName = '사용자';
-    let userClass = '학급 정보 없음';
-    
-    if (CONFIG.DEMO_MODE) {
-        userName = currentUser.name || currentUser.email?.split('@')[0] || '사용자';
-        userClass = currentUser.class || '학급 정보 없음';
-    } else {
-        // Supabase에서 프로필 정보 가져오기
-        try {
-            const { data: profile, error } = await supabase
-                .from(CONFIG.DB_TABLES.PROFILES)
-                .select('name, class')
-                .eq('id', currentUser.id)
-                .single();
-            
-            if (profile && !error) {
-                userName = profile.name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || '사용자';
-                userClass = profile.class || currentUser.user_metadata?.class || '학급 정보 없음';
-            } else {
-                // 프로필이 없으면 user_metadata에서 가져오기
-                userName = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || '사용자';
-                userClass = currentUser.user_metadata?.class || '학급 정보 없음';
-            }
-        } catch (error) {
-            console.error('프로필 로드 오류:', error);
-            userName = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || '사용자';
-            userClass = currentUser.user_metadata?.class || '학급 정보 없음';
+    try {
+        // 인증 컨테이너 숨기기
+        document.getElementById('authContainer').style.display = 'none';
+        
+        // 메인 앱 컨테이너 표시
+        document.getElementById('mainApp').style.display = 'block';
+        
+        // 사용자 정보 표시
+        if (currentUser) {
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userClass').textContent = 
+                `${currentUser.school} ${currentUser.grade}학년 ${currentUser.class}반 ${currentUser.number}번`;
         }
+        
+        // 사용자 진행 상황 로드
+        await loadUserProgress();
+        
+        // AI 코치 초기화
+        initializeAICoach();
+        
+        console.log('메인 앱 표시 완료');
+    } catch (error) {
+        console.error('메인 앱 표시 오류:', error);
+        showError('앱을 로드하는 중 오류가 발생했습니다.');
     }
-    
-    document.getElementById('userName').textContent = userName + '님';
-    document.getElementById('userClass').textContent = userClass;
 }
 
 // 인증 컨테이너 표시
 function showAuthContainer() {
     document.getElementById('authContainer').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
+}
+
+// 폼 전환 함수들
+function showLoginForm() {
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('signupForm').style.display = 'none';
+}
+
+function showSignupForm() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('signupForm').style.display = 'block';
+}
+
+// 오류 메시지 표시
+function showError(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+// 로그인 처리
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!username || !password) {
+        showError('아이디와 비밀번호를 모두 입력해주세요.');
+        return;
+    }
+    
+    try {
+        if (CONFIG.DEMO_MODE) {
+            // 데모 모드에서는 간단한 검증만
+            if (username === 'demo' && password === '1234') {
+                currentUser = {
+                    id: 'demo',
+                    username: 'demo',
+                    name: '데모 사용자',
+                    school: '데모 초등학교',
+                    grade: '5',
+                    class: '1',
+                    number: '1'
+                };
+                await showMainApp();
+                return;
+            } else {
+                showError('데모 모드에서는 아이디: demo, 비밀번호: 1234를 사용해주세요.');
+                return;
+            }
+        }
+        
+        // Supabase를 사용한 실제 로그인
+        // profiles 테이블에서 아이디로 사용자 검색
+        const { data: profiles, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('username', username)
+            .single();
+            
+        if (profileError || !profiles) {
+            showError('존재하지 않는 아이디입니다.');
+            return;
+        }
+        
+        // 비밀번호 확인 (실제 프로덕션에서는 해시된 비밀번호와 비교해야 함)
+        if (profiles.password !== password) {
+            showError('비밀번호가 일치하지 않습니다.');
+            return;
+        }
+        
+        // 로그인 성공
+        currentUser = {
+            id: profiles.id,
+            username: profiles.username,
+            name: profiles.name,
+            school: profiles.school,
+            grade: profiles.grade,
+            class: profiles.class,
+            number: profiles.number
+        };
+        
+        console.log('로그인 성공:', currentUser);
+        await showMainApp();
+        
+    } catch (error) {
+        console.error('로그인 오류:', error);
+        showError('로그인 중 오류가 발생했습니다.');
+    }
+}
+
+// 회원가입 처리
+async function handleSignup(event) {
+    event.preventDefault();
+    
+    const school = document.getElementById('signupSchool').value.trim();
+    const grade = document.getElementById('signupGrade').value;
+    const classNum = document.getElementById('signupClass').value;
+    const number = document.getElementById('signupNumber').value;
+    const name = document.getElementById('signupName').value.trim();
+    const username = document.getElementById('signupUsername').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const privacyAgree = document.getElementById('privacyAgree').checked;
+    
+    // 유효성 검사
+    if (!school || !grade || !classNum || !number || !name || !username || !password) {
+        showError('모든 필드를 입력해주세요.');
+        return;
+    }
+    
+    if (!privacyAgree) {
+        showError('개인정보 수집 및 이용에 동의해주세요.');
+        return;
+    }
+    
+    // 아이디 유효성 검사 (영어, 숫자만)
+    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+        showError('아이디는 영어와 숫자만 사용할 수 있습니다.');
+        return;
+    }
+    
+    // 비밀번호 유효성 검사 (4자리 이상 숫자)
+    if (!/^[0-9]{4,}$/.test(password)) {
+        showError('비밀번호는 4자리 이상의 숫자여야 합니다.');
+        return;
+    }
+    
+    // 번호 유효성 검사
+    const studentNumber = parseInt(number);
+    if (studentNumber < 1 || studentNumber > 50) {
+        showError('번호는 1부터 50 사이의 숫자여야 합니다.');
+        return;
+    }
+    
+    try {
+        if (CONFIG.DEMO_MODE) {
+            // 데모 모드에서는 localStorage에 저장
+            const userData = {
+                id: Date.now().toString(),
+                username,
+                name,
+                school,
+                grade,
+                class: classNum,
+                number: studentNumber,
+                password
+            };
+            localStorage.setItem('demoUser', JSON.stringify(userData));
+            currentUser = userData;
+            await showMainApp();
+            return;
+        }
+        
+        // Supabase를 사용한 실제 회원가입
+        // 먼저 중복 아이디 확인
+        const { data: existingUser, error: checkError } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('username', username)
+            .single();
+            
+        if (existingUser) {
+            showError('이미 사용 중인 아이디입니다.');
+            return;
+        }
+        
+        // 새 사용자 생성
+        const { data: newUser, error: insertError } = await supabase
+            .from('profiles')
+            .insert([
+                {
+                    username,
+                    password, // 실제 프로덕션에서는 비밀번호를 해시해야 함
+                    name,
+                    school,
+                    grade: parseInt(grade),
+                    class: parseInt(classNum),
+                    number: studentNumber,
+                    created_at: new Date().toISOString()
+                }
+            ])
+            .select()
+            .single();
+            
+        if (insertError) {
+            console.error('회원가입 오류:', insertError);
+            showError('회원가입 중 오류가 발생했습니다.');
+            return;
+        }
+        
+        // 회원가입 성공
+        currentUser = {
+            id: newUser.id,
+            username: newUser.username,
+            name: newUser.name,
+            school: newUser.school,
+            grade: newUser.grade,
+            class: newUser.class,
+            number: newUser.number
+        };
+        
+        console.log('회원가입 성공:', currentUser);
+        await showMainApp();
+        
+    } catch (error) {
+        console.error('회원가입 오류:', error);
+        showError('회원가입 중 오류가 발생했습니다.');
+    }
+}
+
+// 로그아웃
+async function logout() {
+    try {
+        if (CONFIG.DEMO_MODE) {
+            // 데모 모드 로그아웃
+            localStorage.removeItem('currentUser');
+        } else {
+            // Supabase 로그아웃
+            await supabase.auth.signOut();
+        }
+        
+        currentUser = null;
+        showAuthContainer();
+        resetApp();
+        
+    } catch (error) {
+        console.error('로그아웃 오류:', error);
+    }
 }
 
 // ===== 데이터 관리 함수 =====
@@ -1049,4 +1378,194 @@ function closeGuidanceModal() {
             document.body.removeChild(modal);
         }, 300);
     }
+} 
+
+// 단계명 매핑
+const stageNames = {
+    1: '관계맺기',
+    2: '집중하기', 
+    3: '조사하기',
+    4: '정리하기',
+    5: '일반화하기',
+    6: '전이하기'
+};
+
+// 단계 표시 함수
+function showStage(stageNumber) {
+    // 현재 활성화된 페이지 숨기기
+    document.querySelectorAll('.stage-page').forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    // 새 페이지 표시
+    const targetStage = document.getElementById(`stage${stageNumber}`);
+    if (targetStage) {
+        targetStage.classList.add('active');
+        currentStage = stageNumber;
+        
+        // 네비게이션 업데이트
+        updateNavigation();
+        
+        // 저장된 데이터가 있으면 복원
+        restoreStageData(stageNumber);
+    }
+}
+
+// 네비게이션 상태 업데이트
+function updateNavigation() {
+    document.querySelectorAll('.nav-stage').forEach(nav => {
+        nav.classList.remove('active');
+    });
+    
+    // 현재 단계 활성화
+    const currentNav = document.querySelector(`.nav-stage[data-stage="${currentStage}"]`);
+    if (currentNav) {
+        currentNav.classList.add('active');
+    }
+    
+    // 완료된 단계들 표시
+    for (let i = 1; i <= 6; i++) {
+        const nav = document.querySelector(`.nav-stage[data-stage="${i}"]`);
+        const status = document.getElementById(`navStatus${i}`);
+        
+        if (stageData[i] && stageData[i].trim() !== '') {
+            nav.classList.add('completed');
+            if (status) status.textContent = '✓';
+        } else {
+            nav.classList.remove('completed');
+            if (status) status.textContent = i === currentStage ? '●' : '○';
+        }
+    }
+}
+
+// 단계 데이터 저장
+function saveStageData(stageNumber, data) {
+    stageData[stageNumber] = data;
+    
+    // 1단계인 경우 초기 의도 설정
+    if (stageNumber === 1) {
+        initialIntent = data;
+        updateIntentDisplay();
+    }
+    
+    updateNavigation();
+    updateProgress();
+}
+
+// 단계 데이터 복원
+function restoreStageData(stageNumber) {
+    const inputFields = {
+        1: 'intent',
+        2: 'question', 
+        3: 'research',
+        4: 'organize',
+        5: 'generalize',
+        6: 'transfer'
+    };
+    
+    const fieldId = inputFields[stageNumber];
+    const inputElement = document.getElementById(fieldId);
+    
+    if (inputElement && stageData[stageNumber]) {
+        inputElement.value = stageData[stageNumber];
+    }
+}
+
+// 의도 표시 업데이트
+function updateIntentDisplay() {
+    const intentDisplay = document.getElementById('intentDisplay');
+    if (intentDisplay) {
+        if (initialIntent && initialIntent.trim() !== '') {
+            intentDisplay.textContent = initialIntent;
+        } else {
+            intentDisplay.textContent = '아직 설정되지 않았습니다.';
+        }
+    }
+}
+
+// 진행률 업데이트
+function updateProgress() {
+    let completedStages = 0;
+    for (let i = 1; i <= 6; i++) {
+        if (stageData[i] && stageData[i].trim() !== '') {
+            completedStages++;
+        }
+    }
+    
+    const progress = Math.round((completedStages / 6) * 100);
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    if (progressFill) progressFill.style.width = `${progress}%`;
+    if (progressText) progressText.textContent = `${progress}%`;
+    
+    // 점수 업데이트 (임시로 완료된 단계 * 15점)
+    totalScore = completedStages * 15;
+    const totalScoreElement = document.getElementById('totalScore');
+    if (totalScoreElement) {
+        totalScoreElement.textContent = `${totalScore}점`;
+    }
+}
+
+// 단계 제출 함수 (기존 함수 수정)
+async function submitStage(stageNumber) {
+    const inputFields = {
+        1: 'intent',
+        2: 'question',
+        3: 'research', 
+        4: 'organize',
+        5: 'generalize',
+        6: 'transfer'
+    };
+    
+    const fieldId = inputFields[stageNumber];
+    const inputElement = document.getElementById(fieldId);
+    
+    if (!inputElement) {
+        showError('입력 필드를 찾을 수 없습니다.');
+        return;
+    }
+    
+    const inputValue = inputElement.value.trim();
+    if (!inputValue) {
+        showError('내용을 입력해주세요.');
+        return;
+    }
+    
+    // 데이터 저장
+    saveStageData(stageNumber, inputValue);
+    
+    // AI 피드백 분석 (1단계가 아닌 경우에만)
+    if (stageNumber > 1 && initialIntent) {
+        try {
+            await analyzeIntentMatch(inputValue, stageNumber);
+        } catch (error) {
+            console.error('AI 분석 오류:', error);
+        }
+    }
+    
+    // 데이터베이스에 저장
+    await saveProgress();
+    
+    // 다음 단계로 이동 (6단계가 아닌 경우)
+    if (stageNumber < 6) {
+        showStage(stageNumber + 1);
+    } else {
+        // 탐구 완료
+        await completeInquiry();
+        showCompletionMessage();
+    }
+}
+
+// 완료 메시지 표시
+function showCompletionMessage() {
+    alert('🎉 탐구 활동이 완료되었습니다!\n\n총 점수: ' + totalScore + '점\n진행률: 100%');
+}
+
+// 앱 초기화 시 1단계 표시
+function initializeApp() {
+    showStage(1);
+    updateIntentDisplay();
+    updateProgress();
+    updateNavigation();
 } 
