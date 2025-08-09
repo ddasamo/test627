@@ -113,7 +113,7 @@
         <!-- 헤더 -->
         <div class="header">
             <div class="header-left">
-                <h1>🔬 의도기반 탐구학습</h1>
+                <img src="https://i.ibb.co/hFBsrqdP/1.png" alt="의도기반 탐구학습" class="header-logo">
             </div>
             <div class="header-right">
                 <div class="user-info">
@@ -205,10 +205,45 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="intent">🎯 탐구하고 싶은 주제나 궁금한 점을 적어보세요:</label>
-                            <textarea id="intent" class="input-area" placeholder="예: 왜 식물은 빛을 향해 자랄까? 어떤 조건에서 식물이 더 잘 자랄까?"></textarea>
+                            <label for="stage1Input">🎯 탐구하고 싶은 주제나 궁금한 점을 적어보세요:</label>
+                            <textarea id="stage1Input" class="input-area" placeholder="예: 왜 식물은 빛을 향해 자랄까? 어떤 조건에서 식물이 더 잘 자랄까?"></textarea>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage1Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage1Image" accept="image/*" onchange="handleImageUpload(1, this)">
+                            <div id="stage1ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage1TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기</h3>
+                            <div class="reflection-questions">
+                                <div class="reflection-item">
+                                    <p><strong>💭 이 단계에서 어떤 생각이 들었나요?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                                <div class="reflection-item">
+                                    <p><strong>🌟 가장 흥미로웠던 부분은?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(1)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp1" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions1"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources1"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
+                            <button class="btn-text-feedback" onclick="getTextFeedback(1)">💡 텍스트 피드백 받기</button>
                             <button class="btn-primary" data-stage="1">다음 단계로</button>
                         </div>
                     </div>
@@ -222,11 +257,46 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="question">🔍 구체적인 탐구 질문을 만들어보세요:</label>
-                            <textarea id="question" class="input-area" placeholder="예: 햇빛의 양에 따라 식물의 성장 속도가 어떻게 달라질까?"></textarea>
+                            <label for="stage2Input">🔍 구체적인 탐구 질문을 만들어보세요:</label>
+                            <textarea id="stage2Input" class="input-area" placeholder="예: 햇빛의 양에 따라 식물의 성장 속도가 어떻게 달라질까?"></textarea>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage2Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage2Image" accept="image/*" onchange="handleImageUpload(2, this)">
+                            <div id="stage2ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage2TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기</h3>
+                            <div class="reflection-questions">
+                                <div class="reflection-item">
+                                    <p><strong>🎯 질문이 명확해졌나요?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                                <div class="reflection-item">
+                                    <p><strong>🔍 더 구체적으로 만들 부분은?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(2)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp2" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions2"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources2"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-text-feedback" onclick="getTextFeedback(2)">💡 텍스트 피드백 받기</button>
                             <button class="btn-primary" data-stage="2">다음 단계로</button>
                         </div>
                     </div>
@@ -240,29 +310,99 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="research">📚 조사한 내용이나 실험/관찰 결과를 적어보세요:</label>
-                            <textarea id="research" class="input-area" placeholder="예: 인터넷에서 찾은 자료, 실험 결과, 관찰한 내용 등"></textarea>
+                            <label for="stage3Input">📚 조사한 내용이나 실험/관찰 결과를 적어보세요:</label>
+                            <textarea id="stage3Input" class="input-area" placeholder="예: 인터넷에서 찾은 자료, 실험 결과, 관찰한 내용 등"></textarea>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage3Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage3Image" accept="image/*" onchange="handleImageUpload(3, this)">
+                            <div id="stage3ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage3TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기</h3>
+                            <div class="reflection-questions">
+                                <div class="reflection-item">
+                                    <p><strong>📊 어떤 자료들을 수집했나요?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                                <div class="reflection-item">
+                                    <p><strong>🔍 가장 유용했던 정보는?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(3)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp3" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions3"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources3"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-text-feedback" onclick="getTextFeedback(3)">💡 텍스트 피드백 받기</button>
                             <button class="btn-primary" data-stage="3">다음 단계로</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 4단계: 정리하기 -->
+                <!-- 4단계: 조직 및 정리하기 -->
                 <div class="stage-page" id="stage4">
                     <div class="stage-header">
-                        <h2>4단계: 정리하기 (Organizing)</h2>
+                        <h2>4단계: 조직 및 정리하기 (Organizing)</h2>
                         <p class="stage-description">수집한 정보를 정리하고 분석해봅시다.</p>
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="organize">📊 조사한 내용을 정리하고 분석한 결과를 적어보세요:</label>
-                            <textarea id="organize" class="input-area" placeholder="예: 데이터 분석 결과, 패턴 발견, 중요한 발견사항 등"></textarea>
+                            <label for="stage4Input">📊 조사한 내용을 정리하고 분석한 결과를 적어보세요:</label>
+                            <textarea id="stage4Input" class="input-area" placeholder="예: 데이터 분석 결과, 패턴 발견, 중요한 발견사항 등"></textarea>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage4Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage4Image" accept="image/*" onchange="handleImageUpload(4, this)">
+                            <div id="stage4ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage4TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기</h3>
+                            <div class="reflection-questions">
+                                <div class="reflection-item">
+                                    <p><strong>📈 어떤 패턴을 발견했나요?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                                <div class="reflection-item">
+                                    <p><strong>💡 가장 중요한 발견은?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(4)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp4" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions4"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources4"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-text-feedback" onclick="getTextFeedback(4)">💡 텍스트 피드백 받기</button>
                             <button class="btn-primary" data-stage="4">다음 단계로</button>
                         </div>
                     </div>
@@ -276,11 +416,46 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="generalize">🧠 탐구 결과를 바탕으로 일반화한 내용을 적어보세요:</label>
-                            <textarea id="generalize" class="input-area" placeholder="예: 발견한 법칙이나 원리, 결론 등"></textarea>
+                            <label for="stage5Input">🧠 탐구 결과를 바탕으로 일반화한 내용을 적어보세요:</label>
+                            <textarea id="stage5Input" class="input-area" placeholder="예: 발견한 법칙이나 원리, 결론 등"></textarea>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage5Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage5Image" accept="image/*" onchange="handleImageUpload(5, this)">
+                            <div id="stage5ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage5TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기</h3>
+                            <div class="reflection-questions">
+                                <div class="reflection-item">
+                                    <p><strong>🎯 어떤 원리를 발견했나요?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                                <div class="reflection-item">
+                                    <p><strong>🌟 이 원리가 다른 곳에도 적용될까요?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(5)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp5" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions5"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources5"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-text-feedback" onclick="getTextFeedback(5)">💡 텍스트 피드백 받기</button>
                             <button class="btn-primary" data-stage="5">다음 단계로</button>
                         </div>
                     </div>
@@ -294,11 +469,46 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="transfer">🔄 배운 내용을 다른 상황에 어떻게 적용할 수 있는지 적어보세요:</label>
-                            <textarea id="transfer" class="input-area" placeholder="예: 실생활 적용 방법, 다른 분야와의 연결점 등"></textarea>
+                            <label for="stage6Input">🔄 배운 내용을 다른 상황에 어떻게 적용할 수 있는지 적어보세요:</label>
+                            <textarea id="stage6Input" class="input-area" placeholder="예: 실생활 적용 방법, 다른 분야와의 연결점 등"></textarea>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage6Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage6Image" accept="image/*" onchange="handleImageUpload(6, this)">
+                            <div id="stage6ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage6TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기</h3>
+                            <div class="reflection-questions">
+                                <div class="reflection-item">
+                                    <p><strong>🌍 실생활에서 어떻게 활용할 수 있나요?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                                <div class="reflection-item">
+                                    <p><strong>🔗 다른 분야와 연결할 수 있나요?</strong></p>
+                                    <textarea placeholder="자유롭게 적어보세요..."></textarea>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(6)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp6" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions6"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources6"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
+                            <button class="btn-text-feedback" onclick="getTextFeedback(6)">💡 텍스트 피드백 받기</button>
                             <button class="btn-primary" data-stage="6">탐구 완료</button>
                         </div>
                     </div>

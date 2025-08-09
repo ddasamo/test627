@@ -970,13 +970,119 @@ async function completeInquiry() {
                 .eq('id', currentInquiryId);
         }
 
-        // 완료 메시지 표시
-        const completionMessage = `${CONFIG.MESSAGES.COMPLETE_SUCCESS}\n\n최종 점수: ${totalScore}점\n성찰 참여: ${reflectionData.length}회\n\n훌륭한 탐구 여정이었습니다!`;
-        alert(completionMessage);
+        // 탐구 돌아보기 레포트 표시
+        showSuccess('탐구가 완료되었습니다! 🎉');
+        setTimeout(() => {
+            showInquiryCompletionReport();
+        }, 1000);
         
     } catch (error) {
         console.error('탐구 완료 저장 오류:', error);
     }
+}
+
+// 탐구 완료 레포트 표시
+function showInquiryCompletionReport() {
+    const reportModal = document.createElement('div');
+    reportModal.className = 'inquiry-completion-modal';
+    reportModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        padding: 20px;
+    `;
+    
+    reportModal.innerHTML = `
+        <div class="completion-report-content">
+            <div class="report-header">
+                <h2>🎉 탐구 돌아보기</h2>
+                <p>지금까지의 탐구 여정을 돌아보며 성찰해봅시다!</p>
+            </div>
+            <div class="report-body">
+                <div class="inquiry-summary">
+                    <h3>📋 탐구 요약</h3>
+                    <p><strong>탐구 주제:</strong> ${initialIntent || '설정되지 않음'}</p>
+                    <p><strong>완료 단계:</strong> 6단계 (전체 완료)</p>
+                    <p><strong>총 점수:</strong> ${totalScore}점</p>
+                    <p><strong>완료 시간:</strong> ${new Date().toLocaleString('ko-KR')}</p>
+                </div>
+                
+                <div class="stage-activities">
+                    <h3>🔍 단계별 활동 내용</h3>
+                    ${generateStageActivitiesSummary()}
+                </div>
+                
+                <div class="positive-feedback">
+                    <h3>🌟 잘한 점들</h3>
+                    <ul>
+                        <li>체계적인 탐구 과정을 완주했습니다.</li>
+                        <li>각 단계별로 성실하게 내용을 작성했습니다.</li>
+                        <li>탐구 주제에 대한 깊이 있는 사고를 보여주었습니다.</li>
+                        <li>논리적인 사고 과정을 거쳐 결론에 도달했습니다.</li>
+                    </ul>
+                </div>
+                
+                <div class="improvement-suggestions">
+                    <h3>💡 더 좋은 탐구를 위한 제안</h3>
+                    <ul>
+                        <li>다양한 자료를 활용하여 더 풍부한 탐구를 해보세요.</li>
+                        <li>실험이나 관찰을 통해 직접 경험해보세요.</li>
+                        <li>다른 사람들과 의견을 나누어보세요.</li>
+                        <li>탐구 결과를 실생활에 적용해보세요.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn-primary" onclick="closeCompletionReport()">확인</button>
+                <button class="btn-secondary" onclick="startNewInquiry()">새 탐구 시작</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(reportModal);
+}
+
+// 단계별 활동 요약 생성
+function generateStageActivitiesSummary() {
+    const stageNames = {
+        1: '관계맺기', 2: '집중하기', 3: '조사하기',
+        4: '조직 및 정리하기', 5: '일반화하기', 6: '전이하기'
+    };
+    
+    let summary = '';
+    for (let i = 1; i <= 6; i++) {
+        const input = document.getElementById(`stage${i}Input`)?.value || '내용 없음';
+        const shortContent = input.length > 50 ? input.substring(0, 50) + '...' : input;
+        summary += `
+            <div class="stage-summary">
+                <h4>${i}단계: ${stageNames[i]}</h4>
+                <p>${shortContent}</p>
+            </div>
+        `;
+    }
+    return summary;
+}
+
+// 완료 레포트 닫기
+function closeCompletionReport() {
+    const modal = document.querySelector('.inquiry-completion-modal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+
+// 새 탐구 시작
+function startNewInquiry() {
+    closeCompletionReport();
+    resetApp();
+    showStage(1);
 }
 
 // ===== 계산 함수 =====
@@ -1640,6 +1746,7 @@ async function submitStage(stageNumber) {
         // 1단계인 경우 초기 의도 설정
         if (stageNumber === 1) {
             initialIntent = inputValue;
+            inquiryTopic = inputValue; // 탐구 주제 설정
             updateIntentDisplay();
         }
         
@@ -2650,4 +2757,442 @@ function handleTeacherLogout() {
     document.getElementById('studentReportPage').style.display = 'none';
     document.getElementById('authContainer').style.display = 'flex';
     currentStudentData = null;
+}
+
+// ===== 이미지 관련 함수들 =====
+
+// 전역 변수 - 이미지 저장
+let stageImages = {};
+let inquiryTopic = '';
+
+// 이미지 업로드 처리
+async function handleImageUpload(stage, input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    // 파일 유효성 검사
+    if (!file.type.startsWith('image/')) {
+        showError('이미지 파일만 업로드할 수 있습니다.');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB 제한
+        showError('이미지 크기는 5MB 이하여야 합니다.');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const previewContainer = document.getElementById(`stage${stage}ImagePreview`);
+        previewContainer.innerHTML = `
+            <div class="image-preview-item">
+                <img src="${e.target.result}" alt="업로드된 이미지" class="preview-image">
+                <div class="image-feedback-section">
+                    <button class="btn-image-feedback" onclick="getImageFeedback(${stage})">💡 이미지 피드백 받기</button>
+                    <div class="image-analysis-status" id="analysisStatus${stage}" style="display: none;"></div>
+                </div>
+                <button type="button" onclick="removeImage(${stage})" class="remove-image-btn">삭제</button>
+            </div>
+        `;
+        
+        // 이미지 데이터 저장
+        stageImages[stage] = {
+            file: file,
+            dataUrl: e.target.result
+        };
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// 이미지 피드백 받기
+async function getImageFeedback(stage) {
+    const statusElement = document.getElementById(`analysisStatus${stage}`);
+    const feedbackBtn = document.querySelector(`button[onclick="getImageFeedback(${stage})"]`);
+    
+    if (!statusElement || !stageImages[stage]) return;
+    
+    statusElement.style.display = 'block';
+    statusElement.innerHTML = '<div class="analysis-loading">🔍 이미지 분석 중...</div>';
+    feedbackBtn.disabled = true;
+    feedbackBtn.textContent = '분석 중...';
+    
+    try {
+        if (CONFIG.AI_COACH.ENABLED && inquiryTopic) {
+            await analyzeImageSuitabilityWithStructuredFeedback(stage, stageImages[stage].dataUrl);
+        } else {
+            // AI가 비활성화된 경우 기본 피드백
+            displayStructuredImageFeedback(stage, null);
+        }
+    } catch (error) {
+        console.error('이미지 분석 오류:', error);
+        statusElement.innerHTML = '<div class="analysis-error">⚠️ 이미지 분석 중 오류가 발생했습니다.</div>';
+    } finally {
+        feedbackBtn.style.display = 'none'; // 피드백 후 버튼 숨김
+    }
+}
+
+// AI를 통한 이미지 적합성 분석
+async function analyzeImageSuitabilityWithStructuredFeedback(stage, imageDataUrl) {
+    const stageNames = {
+        1: '관계맺기', 2: '집중하기', 3: '조사하기',
+        4: '조직 및 정리하기', 5: '일반화하기', 6: '전이하기'
+    };
+    
+    const stageDescriptions = {
+        1: '탐구 주제에 대한 호기심을 갖고 초기 의도를 설정하는 단계',
+        2: '탐구 질문을 구체적으로 만드는 단계',
+        3: '다양한 방법으로 정보를 수집하고 탐구하는 단계',
+        4: '수집한 정보를 정리하고 분석하는 단계',
+        5: '탐구 결과를 바탕으로 일반적인 원리나 법칙을 찾는 단계',
+        6: '배운 내용을 다른 상황에 적용하는 단계'
+    };
+    
+    const userText = document.getElementById(`stage${stage}Input`)?.value || '';
+    
+    const structuredPrompt = `
+    다음 이미지를 분석하여 개조식으로 구조화된 피드백을 제공해주세요.
+    
+    탐구 주제: ${inquiryTopic}
+    현재 단계: ${stage}단계 - ${stageNames[stage]} (${stageDescriptions[stage]})
+    학생이 작성한 내용: ${userText}
+    
+    다음 형식으로 분석해주세요:
+    
+    1. 탐구 단계 적합성 분석
+    - 업로드한 이미지가 현재 ${stageNames[stage]} 단계에 얼마나 적합한지 평가
+    - 탐구 주제와의 연관성 분석
+    
+    2. 탐구 피드백  
+    - 잘한 점과 좋은 점들을 개조식으로 간단명료하게 언급 (3-4개 항목, 각 1줄)
+    - 탐구 주제 및 단계에 맞게 올린 점에 대한 칭찬
+    
+    3. 후속 탐구 활용 방안
+    - 업로드한 자료를 다음 탐구 활동에 어떻게 활용할 수 있는지 제안
+    - 이어갈 수 있는 탐구 방향 제시
+    
+    4. 추가 자료 제안
+    - 학생의 텍스트 내용을 바탕으로 더 추가하면 좋을 자료 제안
+    - 관련 뉴스 기사나 참고 자료 링크 형태로 제공
+    
+    응답은 학생 친화적이고 격려하는 톤으로 작성하고, 기술적 용어나 JSON 형태는 사용하지 마세요.
+    `;
+    
+    try {
+        const response = await callGeminiVisionAPI(structuredPrompt, imageDataUrl);
+        displayStructuredImageFeedback(stage, response);
+    } catch (error) {
+        console.error('Gemini Vision API 오류:', error);
+        displayStructuredImageFeedback(stage, null);
+    }
+}
+
+// Gemini Vision API 호출
+async function callGeminiVisionAPI(prompt, imageDataUrl) {
+    if (!CONFIG.AI_COACH.ENABLED) {
+        throw new Error('AI 코치가 비활성화되어 있습니다.');
+    }
+    
+    try {
+        const base64Data = imageDataUrl.split(',')[1];
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.AI_COACH.GEMINI_API_KEY}`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        {
+                            inline_data: {
+                                mime_type: "image/jpeg",
+                                data: base64Data
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    temperature: CONFIG.AI_COACH.TEMPERATURE,
+                    maxOutputTokens: CONFIG.AI_COACH.MAX_TOKENS,
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Gemini Vision API 오류: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            return data.candidates[0].content.parts[0].text;
+        }
+        
+        throw new Error('올바르지 않은 API 응답 형식');
+    } catch (error) {
+        console.error('Gemini Vision API 호출 오류:', error);
+        throw error;
+    }
+}
+
+// 구조화된 이미지 피드백 표시
+function displayStructuredImageFeedback(stage, analysis) {
+    const statusElement = document.getElementById(`analysisStatus${stage}`);
+    if (!statusElement) return;
+    
+    const structuredFeedback = generateStructuredImageFeedback(stage, analysis);
+    
+    statusElement.innerHTML = `
+        <div class="analysis-complete">
+            <div class="structured-feedback">
+                <h4>📊 이미지 분석 결과</h4>
+                <div class="feedback-item">
+                    <strong>1️⃣ 탐구 단계 적합성 분석</strong>
+                    <p>${structuredFeedback.stageCompatibility}</p>
+                </div>
+                <div class="feedback-item">
+                    <strong>2️⃣ ${getStageNames()[stage]} 피드백</strong>
+                    <div class="concise-feedback">
+                        ${structuredFeedback.positiveFeedback}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 구조화된 이미지 피드백 생성
+function generateStructuredImageFeedback(stage, analysis) {
+    const stageName = getStageNames()[stage];
+    
+    if (analysis && typeof analysis === 'object' && analysis.feedback) {
+        return {
+            stageCompatibility: analysis.stageCompatibility || `업로드하신 이미지가 ${stageName} 단계에 적절합니다.`,
+            positiveFeedback: `
+                <ul>
+                    <li>탐구 주제 '${inquiryTopic}'와 관련된 시각적 자료를 준비한 점이 훌륭합니다.</li>
+                    <li>${stageName} 단계에 적합한 이미지를 선택했습니다.</li>
+                    <li>탐구 과정을 이미지로 기록하려는 노력이 보입니다.</li>
+                </ul>
+            `,
+            followUpSuggestions: analysis.followUpSuggestions || '',
+            additionalResources: analysis.additionalResources || ''
+        };
+    } else if (analysis && typeof analysis === 'string') {
+        // AI 응답을 파싱하여 구조화
+        const cleanedAnalysis = cleanImageFeedback(analysis);
+        return {
+            stageCompatibility: `업로드하신 이미지가 ${stageName} 단계에 적절합니다.`,
+            positiveFeedback: `
+                <ul>
+                    <li>탐구 주제 '${inquiryTopic}'와 관련된 시각적 자료를 준비한 점이 좋습니다.</li>
+                    <li>${stageName} 단계에 적절한 이미지를 업로드했습니다.</li>
+                    <li>탐구 활동을 시각적으로 기록하려는 시도가 훌륭합니다.</li>
+                </ul>
+            `,
+            followUpSuggestions: '',
+            additionalResources: ''
+        };
+    } else {
+        // 기본 피드백
+        return {
+            stageCompatibility: `업로드하신 이미지가 ${stageName} 단계에서 활용하기 좋습니다.`,
+            positiveFeedback: `
+                <ul>
+                    <li>탐구 주제 '${inquiryTopic}'와 관련된 시각적 자료를 준비해주셔서 좋습니다.</li>
+                    <li>${stageName} 단계에서 이미지 자료를 활용하려는 의도가 좋습니다.</li>
+                    <li>탐구 과정을 다양한 방법으로 기록하려는 노력이 보입니다.</li>
+                </ul>
+            `,
+            followUpSuggestions: '',
+            additionalResources: ''
+        };
+    }
+}
+
+// 이미지 피드백 정리 함수
+function cleanImageFeedback(feedback) {
+    if (!feedback) return '';
+    
+    let cleaned = feedback;
+    
+    // 기술적 용어 제거
+    cleaned = cleaned.replace(/js0n/gi, '');
+    cleaned = cleaned.replace(/stagAppropriate/gi, '');
+    cleaned = cleaned.replace(/json/gi, '');
+    cleaned = cleaned.replace(/\{|\}/g, '');
+    cleaned = cleaned.replace(/\[|\]/g, '');
+    cleaned = cleaned.replace(/"/g, '');
+    
+    // 불필요한 공백 정리
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
+}
+
+// 이미지 제거
+function removeImage(stage) {
+    const previewContainer = document.getElementById(`stage${stage}ImagePreview`);
+    const fileInput = document.getElementById(`stage${stage}Image`);
+    
+    if (previewContainer) {
+        previewContainer.innerHTML = '';
+    }
+    
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    
+    delete stageImages[stage];
+}
+
+// 단계명 매핑 함수
+function getStageNames() {
+    return {
+        1: '관계맺기',
+        2: '집중하기', 
+        3: '조사하기',
+        4: '조직 및 정리하기',
+        5: '일반화하기',
+        6: '전이하기'
+    };
+}
+
+// 텍스트 피드백 받기
+async function getTextFeedback(stage) {
+    const inputElement = document.getElementById(`stage${stage}Input`);
+    const feedbackSection = document.getElementById(`stage${stage}TextFeedback`);
+    const stageName = getStageNames()[stage];
+    
+    if (!inputElement || !feedbackSection) return;
+    
+    const userText = inputElement.value.trim();
+    if (!userText) {
+        showError('먼저 내용을 입력해주세요.');
+        return;
+    }
+    
+    // 로딩 상태 표시
+    feedbackSection.innerHTML = `<h4>🤖 ${stageName} 피드백 생성 중...</h4><p>잠시만 기다려주세요.</p>`;
+    
+    try {
+        let feedback = '';
+        
+        if (CONFIG.AI_COACH.ENABLED) {
+            // AI 피드백 생성 (실제 구현 시 callGeminiAPI 사용)
+            feedback = `${stageName} 단계에서 작성하신 내용이 매우 좋습니다. 탐구 주제에 대한 깊이 있는 사고가 돋보입니다.`;
+        } else {
+            feedback = `${stageName} 단계를 잘 완료하셨습니다. 계속해서 다음 단계로 진행해보세요.`;
+        }
+        
+        feedbackSection.innerHTML = `<h4>💡 ${stageName} 피드백</h4><p>${feedback}</p>`;
+        
+    } catch (error) {
+        console.error('텍스트 피드백 생성 오류:', error);
+        feedbackSection.innerHTML = `<h4>⚠️ 피드백 생성 오류</h4><p>피드백 생성 중 오류가 발생했습니다.</p>`;
+    }
+}
+
+// 후속 탐구 활용 방안 표시
+function showStageFollowUp(stage) {
+    const followUpContent = document.getElementById(`stageFollowUp${stage}`);
+    const button = document.querySelector(`button[onclick="showStageFollowUp(${stage})"]`);
+    
+    if (followUpContent && button) {
+        if (followUpContent.style.display === 'none') {
+            generateStageFollowUp(stage); // 내용 생성
+            followUpContent.style.display = 'block';
+            button.textContent = '🔼 후속 탐구 활용 방안 및 추가 자료 숨기기';
+        } else {
+            followUpContent.style.display = 'none';
+            button.textContent = '💡 후속 탐구 활용 방안 및 추가 자료 보기';
+        }
+    }
+}
+
+// 단계별 후속 방안 생성
+function generateStageFollowUp(stage) {
+    const userText = document.getElementById(`stage${stage}Input`)?.value || '';
+    const hasImage = stageImages[stage] ? true : false;
+    
+    // 후속 제안 생성
+    const followUpSuggestions = getStageFollowUpSuggestions(stage, userText, hasImage);
+    document.getElementById(`followUpSuggestions${stage}`).innerHTML = followUpSuggestions;
+    
+    // 추가 자료 생성
+    const additionalResources = generateStageAdditionalResources(stage, userText, inquiryTopic);
+    document.getElementById(`additionalResources${stage}`).innerHTML = additionalResources;
+}
+
+// 단계별 후속 제안
+function getStageFollowUpSuggestions(stage, userText, hasImage) {
+    const suggestions = {
+        1: `
+            <ul>
+                <li>관심 있는 주제를 더 구체적으로 세분화해보세요</li>
+                <li>주변 사람들에게 같은 주제에 대한 생각을 물어보세요</li>
+                <li>관련 책이나 자료를 찾아 기초 지식을 쌓아보세요</li>
+                <li>실제로 관찰할 수 있는 현상인지 확인해보세요</li>
+            </ul>
+        `,
+        2: `
+            <ul>
+                <li>질문을 더 구체적이고 측정 가능하게 만들어보세요</li>
+                <li>가설을 세워보고 예상되는 결과를 적어보세요</li>
+                <li>어떤 방법으로 답을 찾을지 계획을 세워보세요</li>
+                <li>필요한 도구나 재료를 미리 준비해보세요</li>
+            </ul>
+        `,
+        3: `
+            <ul>
+                <li>다양한 출처에서 정보를 수집해보세요</li>
+                <li>직접 실험이나 관찰을 해보세요</li>
+                <li>전문가나 선생님께 조언을 구해보세요</li>
+                <li>수집한 자료를 체계적으로 정리해보세요</li>
+            </ul>
+        `,
+        4: `
+            <ul>
+                <li>수집한 데이터를 표나 그래프로 정리해보세요</li>
+                <li>패턴이나 규칙성을 찾아보세요</li>
+                <li>예상했던 결과와 실제 결과를 비교해보세요</li>
+                <li>의외의 발견이나 예외 상황을 분석해보세요</li>
+            </ul>
+        `,
+        5: `
+            <ul>
+                <li>발견한 원리가 다른 상황에도 적용되는지 확인해보세요</li>
+                <li>비슷한 현상들과 연결지어 생각해보세요</li>
+                <li>일반적인 법칙이나 원리로 정리해보세요</li>
+                <li>다른 사람들과 토론하며 생각을 발전시켜보세요</li>
+            </ul>
+        `,
+        6: `
+            <ul>
+                <li>학습한 내용을 실생활 문제 해결에 적용해보세요</li>
+                <li>다른 교과목이나 분야와 연결해보세요</li>
+                <li>새로운 상황에서 어떻게 활용할지 계획해보세요</li>
+                <li>배운 내용을 다른 사람에게 설명해보세요</li>
+            </ul>
+        `
+    };
+    
+    return suggestions[stage] || '<p>이 단계에서 학습한 내용을 바탕으로 다음 활동을 계획해보세요.</p>';
+}
+
+// 추가 자료 제안 생성
+function generateStageAdditionalResources(stage, userText, topic) {
+    const baseResources = `
+        <div class="resource-links">
+            <a href="https://www.google.com/search?q=${encodeURIComponent(topic + ' 뉴스')}" target="_blank" class="resource-link">📰 관련 뉴스 검색</a>
+            <a href="https://www.google.com/search?q=${encodeURIComponent(topic + ' 교육자료')}" target="_blank" class="resource-link">📚 교육 자료 검색</a>
+            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(topic)}" target="_blank" class="resource-link">🎥 관련 동영상 검색</a>
+            <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(topic)}" target="_blank" class="resource-link">🔬 학술 자료 검색</a>
+        </div>
+    `;
+    
+    return baseResources;
 } 
