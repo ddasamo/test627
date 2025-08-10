@@ -9,8 +9,26 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
+    <!-- 대문 페이지 -->
+    <div class="welcome-container" id="welcomeContainer">
+        <div class="welcome-content">
+            <div class="welcome-text">
+                <h1 class="welcome-title">의도기반 탐구학습 시스템</h1>
+                <p class="welcome-subtitle">호기심을 탐구로, 탐구를 지혜로</p>
+                <p class="welcome-description">
+                    체계적인 6단계 탐구 과정을 통해<br>
+                    스스로 질문하고, 조사하고, 발견하는<br>
+                    진정한 학습의 즐거움을 경험해보세요.
+                </p>
+                <button class="btn-start-inquiry" id="startInquiryBtn">
+                    🎯 탐구 시작하기
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 로그인/회원가입 화면 -->
-    <div class="login-container" id="authContainer">
+    <div class="login-container" id="authContainer" style="display: none;">
         <div class="login-box">
             <div class="login-header">
                 <h1>🎯</h1>
@@ -113,7 +131,7 @@
         <!-- 헤더 -->
         <div class="header">
             <div class="header-left">
-                <h1>🔬 의도기반 탐구학습</h1>
+                <img src="https://i.ibb.co/hFBsrqdP/1.png" alt="의도기반 탐구학습" class="header-logo">
             </div>
             <div class="header-right">
                 <div class="user-info">
@@ -125,9 +143,9 @@
         </div>
 
         <div class="main-layout">
-            <!-- 왼쪽 사이드바 (점수 및 진행상황) -->
+            <!-- 왼쪽 사이드바 (진행상황) -->
             <div class="sidebar">
-                <div class="score-section">
+                <div class="score-section" style="display: none;">
                     <div class="total-score">
                         <div class="score-number" id="totalScore">0점</div>
                         <div class="score-label">⭐⭐⭐⭐⭐ 탐구 숙련자</div>
@@ -142,10 +160,21 @@
                 <div class="intent-tracker">
                     <div class="intent-header">
                         <span class="intent-icon">🎯</span>
-                        <span class="intent-title">초기 탐구 의도</span>
+                        <span class="intent-title">탐구 정보</span>
                     </div>
-                    <div class="intent-content" id="intentDisplay">
-                        아직 설정되지 않았습니다.
+                    <div class="inquiry-info">
+                        <div class="inquiry-topic-section">
+                            <h4>📚 탐구 주제</h4>
+                            <div class="inquiry-topic-content" id="topicDisplay">
+                                아직 설정되지 않았습니다.
+                            </div>
+                        </div>
+                        <div class="inquiry-intent-section">
+                            <h4>💭 탐구 의도</h4>
+                            <div class="intent-content" id="intentDisplay">
+                                아직 설정되지 않았습니다.
+                            </div>
+                        </div>
                     </div>
                     <div class="intent-match">
                         <span class="match-label">🟢 의도 일치도:</span>
@@ -161,10 +190,15 @@
                 <div class="stage-navigation">
                     <h3>탐구 단계</h3>
                     <div class="nav-stages">
-                        <button class="nav-stage active" data-stage="1">
+                        <button class="nav-stage" data-stage="setup">
+                            <span class="stage-number">🔧</span>
+                            <span class="stage-name">탐구 설정</span>
+                            <span class="stage-status" id="navStatusSetup">●</span>
+                        </button>
+                        <button class="nav-stage" data-stage="1">
                             <span class="stage-number">1</span>
                             <span class="stage-name">관계맺기</span>
-                            <span class="stage-status" id="navStatus1">●</span>
+                            <span class="stage-status" id="navStatus1">○</span>
                         </button>
                         <button class="nav-stage" data-stage="2">
                             <span class="stage-number">2</span>
@@ -197,19 +231,120 @@
 
             <!-- 메인 컨텐츠 영역 -->
             <div class="main-content">
+                <!-- 탐구 설정 단계 -->
+                <div class="stage-page active" id="inquirySetup">
+                    <div class="stage-header">
+                        <h2>🔧 탐구 설정</h2>
+                        <p class="stage-description">탐구를 시작하기 전에 기본 설정을 완료해주세요.</p>
+                    </div>
+                    <div class="stage-content">
+                        <div class="setup-section">
+                            <h3>👥 탐구 형태 선택</h3>
+                            <div class="inquiry-type-selection">
+                                <label class="inquiry-type-option">
+                                    <input type="radio" name="inquiryType" value="individual" checked>
+                                    <span class="radio-custom"></span>
+                                    <span class="option-text">🙋‍♂️ 개인 탐구</span>
+                                </label>
+                                <label class="inquiry-type-option">
+                                    <input type="radio" name="inquiryType" value="group">
+                                    <span class="radio-custom"></span>
+                                    <span class="option-text">👥 모둠 탐구</span>
+                                </label>
+                            </div>
+                            
+                            <div class="group-members-section" id="groupMembersSection" style="display: none;">
+                                <label for="groupMembers">모둠 구성원 (쉼표로 구분해서 입력하세요):</label>
+                                <input type="text" id="groupMembers" class="form-input" placeholder="예: 김철수, 이영희, 박민수">
+                            </div>
+                        </div>
+                        
+                        <div class="setup-section">
+                            <h3>🎯 탐구 주제</h3>
+                            <div class="input-section">
+                                <label for="inquiryTopic">탐구하고 싶은 주제를 입력하세요:</label>
+                                <input type="text" id="inquiryTopic" class="form-input" placeholder="예: 식물의 성장과 빛의 관계">
+                            </div>
+                        </div>
+                        
+                        <div class="setup-section">
+                            <h3>💭 탐구 의도</h3>
+                            <div class="input-section">
+                                <label for="inquiryIntent">이 탐구를 통해 알고 싶은 것이나 해결하고 싶은 문제를 적어보세요:</label>
+                                <textarea id="inquiryIntent" class="input-area" rows="4" placeholder="예: 식물이 빛을 받는 양에 따라 성장 속도가 어떻게 달라지는지 알고 싶습니다."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="stage-actions">
+                            <button class="btn-primary" onclick="completeInquirySetup()">탐구 시작하기</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 1단계: 관계맺기 -->
-                <div class="stage-page active" id="stage1">
+                <div class="stage-page" id="stage1">
                     <div class="stage-header">
                         <h2>1단계: 관계맺기 (Engaging)</h2>
                         <p class="stage-description">탐구 주제에 대한 호기심을 갖고 초기 의도를 설정합니다.</p>
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="intent">🎯 탐구하고 싶은 주제나 궁금한 점을 적어보세요:</label>
-                            <textarea id="intent" class="input-area" placeholder="예: 왜 식물은 빛을 향해 자랄까? 어떤 조건에서 식물이 더 잘 자랄까?"></textarea>
+                            <label for="stage1Input">🎯 탐구하고 싶은 주제나 궁금한 점을 적어보세요:</label>
+                            <textarea id="stage1Input" class="input-area" placeholder="예: 왜 식물은 빛을 향해 자랄까? 어떤 조건에서 식물이 더 잘 자랄까?"></textarea>
+                            <div class="text-feedback-actions">
+                                <button class="btn-text-feedback" onclick="getTextFeedback(1)">💡 텍스트 피드백 받기</button>
+                            </div>
+                            <div class="text-feedback-section" id="stage1TextFeedback"></div>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage1Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage1Image" accept="image/*" onchange="handleImageUpload(1, this)">
+                            <div id="stage1ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage1TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기 - 관계맺기 (Relating)</h3>
+                            <div class="reflection-checklist">
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="1" data-item="1">
+                                        <span class="checkmark"></span>
+                                        이번 주제가 나의 경험이나 관심사와 관련이 있다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="1" data-item="2">
+                                        <span class="checkmark"></span>
+                                        이 주제를 선택한 이유를 스스로 설명할 수 있다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="1" data-item="3">
+                                        <span class="checkmark"></span>
+                                        내가 이미 알고 있는 지식과 이번 주제가 어떻게 연결되는지 생각해 보았다.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(1)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp1" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions1"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources1"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
-                            <button class="btn-primary" data-stage="1">다음 단계로</button>
+                            <button class="btn-primary" data-stage="1">집중하기</button>
                         </div>
                     </div>
                 </div>
@@ -222,12 +357,63 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="question">🔍 구체적인 탐구 질문을 만들어보세요:</label>
-                            <textarea id="question" class="input-area" placeholder="예: 햇빛의 양에 따라 식물의 성장 속도가 어떻게 달라질까?"></textarea>
+                            <label for="stage2Input">🔍 구체적인 탐구 질문을 만들어보세요:</label>
+                            <textarea id="stage2Input" class="input-area" placeholder="예: 햇빛의 양에 따라 식물의 성장 속도가 어떻게 달라질까?"></textarea>
+                            <div class="text-feedback-actions">
+                                <button class="btn-text-feedback" onclick="getTextFeedback(2)">💡 텍스트 피드백 받기</button>
+                            </div>
+                            <div class="text-feedback-section" id="stage2TextFeedback"></div>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage2Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage2Image" accept="image/*" onchange="handleImageUpload(2, this)">
+                            <div id="stage2ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage2TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기 - 집중하기 (Focusing)</h3>
+                            <div class="reflection-checklist">
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="2" data-item="1">
+                                        <span class="checkmark"></span>
+                                        내가 세운 탐구 질문이 구체적이고 탐구할 가치가 있다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="2" data-item="2">
+                                        <span class="checkmark"></span>
+                                        질문이 단순 사실을 묻는 것에서 개념과 적용으로 확장되었다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="2" data-item="3">
+                                        <span class="checkmark"></span>
+                                        내가 세운 질문이 탐구 전 과정을 이끌어 주고 있다.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(2)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp2" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions2"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources2"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
-                            <button class="btn-primary" data-stage="2">다음 단계로</button>
+                            <button class="btn-primary" data-stage="2">조사하기</button>
                         </div>
                     </div>
                 </div>
@@ -240,30 +426,132 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="research">📚 조사한 내용이나 실험/관찰 결과를 적어보세요:</label>
-                            <textarea id="research" class="input-area" placeholder="예: 인터넷에서 찾은 자료, 실험 결과, 관찰한 내용 등"></textarea>
+                            <label for="stage3Input">📚 조사한 내용이나 실험/관찰 결과를 적어보세요:</label>
+                            <textarea id="stage3Input" class="input-area" placeholder="예: 인터넷에서 찾은 자료, 실험 결과, 관찰한 내용 등"></textarea>
+                            <div class="text-feedback-actions">
+                                <button class="btn-text-feedback" onclick="getTextFeedback(3)">💡 텍스트 피드백 받기</button>
+                            </div>
+                            <div class="text-feedback-section" id="stage3TextFeedback"></div>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage3Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage3Image" accept="image/*" onchange="handleImageUpload(3, this)">
+                            <div id="stage3ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage3TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기 - 조사하기 (Investigating)</h3>
+                            <div class="reflection-checklist">
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="3" data-item="1">
+                                        <span class="checkmark"></span>
+                                        다양한 출처(책, 기사, 통계, 현장 조사 등)에서 자료를 수집했다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="3" data-item="2">
+                                        <span class="checkmark"></span>
+                                        자료 출처의 신뢰성과 정확성을 확인했다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="3" data-item="3">
+                                        <span class="checkmark"></span>
+                                        서로 다른 자료의 관점과 내용을 비교·분석했다.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(3)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp3" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions3"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources3"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
-                            <button class="btn-primary" data-stage="3">다음 단계로</button>
+                            <button class="btn-primary" data-stage="3">정리하기</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 4단계: 정리하기 -->
+                <!-- 4단계: 조직 및 정리하기 -->
                 <div class="stage-page" id="stage4">
                     <div class="stage-header">
-                        <h2>4단계: 정리하기 (Organizing)</h2>
+                        <h2>4단계: 조직 및 정리하기 (Organizing)</h2>
                         <p class="stage-description">수집한 정보를 정리하고 분석해봅시다.</p>
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="organize">📊 조사한 내용을 정리하고 분석한 결과를 적어보세요:</label>
-                            <textarea id="organize" class="input-area" placeholder="예: 데이터 분석 결과, 패턴 발견, 중요한 발견사항 등"></textarea>
+                            <label for="stage4Input">📊 조사한 내용을 정리하고 분석한 결과를 적어보세요:</label>
+                            <textarea id="stage4Input" class="input-area" placeholder="예: 데이터 분석 결과, 패턴 발견, 중요한 발견사항 등"></textarea>
+                            <div class="text-feedback-actions">
+                                <button class="btn-text-feedback" onclick="getTextFeedback(4)">💡 텍스트 피드백 받기</button>
+                            </div>
+                            <div class="text-feedback-section" id="stage4TextFeedback"></div>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage4Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage4Image" accept="image/*" onchange="handleImageUpload(4, this)">
+                            <div id="stage4ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage4TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기 - 조직 및 정리하기 (Organizing & Synthesizing)</h3>
+                            <div class="reflection-checklist">
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="4" data-item="1">
+                                        <span class="checkmark"></span>
+                                        수집한 자료를 주제별·개념별로 분류했다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="4" data-item="2">
+                                        <span class="checkmark"></span>
+                                        자료 간의 관계(공통점, 차이점, 인과관계)를 명확히 정리했다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="4" data-item="3">
+                                        <span class="checkmark"></span>
+                                        정리한 내용을 시각 자료(표, 그래프, 개념도 등)로 표현했다.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(4)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp4" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions4"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources4"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
-                            <button class="btn-primary" data-stage="4">다음 단계로</button>
+                            <button class="btn-primary" data-stage="4">일반화하기</button>
                         </div>
                     </div>
                 </div>
@@ -276,12 +564,63 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="generalize">🧠 탐구 결과를 바탕으로 일반화한 내용을 적어보세요:</label>
-                            <textarea id="generalize" class="input-area" placeholder="예: 발견한 법칙이나 원리, 결론 등"></textarea>
+                            <label for="stage5Input">🧠 탐구 결과를 바탕으로 일반화한 내용을 적어보세요:</label>
+                            <textarea id="stage5Input" class="input-area" placeholder="예: 발견한 법칙이나 원리, 결론 등"></textarea>
+                            <div class="text-feedback-actions">
+                                <button class="btn-text-feedback" onclick="getTextFeedback(5)">💡 텍스트 피드백 받기</button>
+                            </div>
+                            <div class="text-feedback-section" id="stage5TextFeedback"></div>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage5Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage5Image" accept="image/*" onchange="handleImageUpload(5, this)">
+                            <div id="stage5ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage5TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기 - 일반화하기 (Generalizing)</h3>
+                            <div class="reflection-checklist">
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="5" data-item="1">
+                                        <span class="checkmark"></span>
+                                        도출한 일반화 진술이 보편성과 타당성을 가진다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="5" data-item="2">
+                                        <span class="checkmark"></span>
+                                        일반화 진술이 핵심 개념들 간의 관계를 잘 설명하고 있다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="5" data-item="3">
+                                        <span class="checkmark"></span>
+                                        일반화 진술을 근거 자료와 연결해 설명할 수 있다.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(5)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp5" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions5"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources5"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
-                            <button class="btn-primary" data-stage="5">다음 단계로</button>
+                            <button class="btn-primary" data-stage="5">전이하기</button>
                         </div>
                     </div>
                 </div>
@@ -294,8 +633,59 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="transfer">🔄 배운 내용을 다른 상황에 어떻게 적용할 수 있는지 적어보세요:</label>
-                            <textarea id="transfer" class="input-area" placeholder="예: 실생활 적용 방법, 다른 분야와의 연결점 등"></textarea>
+                            <label for="stage6Input">🔄 배운 내용을 다른 상황에 어떻게 적용할 수 있는지 적어보세요:</label>
+                            <textarea id="stage6Input" class="input-area" placeholder="예: 실생활 적용 방법, 다른 분야와의 연결점 등"></textarea>
+                            <div class="text-feedback-actions">
+                                <button class="btn-text-feedback" onclick="getTextFeedback(6)">💡 텍스트 피드백 받기</button>
+                            </div>
+                            <div class="text-feedback-section" id="stage6TextFeedback"></div>
+                        </div>
+                        <div class="image-section">
+                            <label for="stage6Image">📸 관련 이미지 업로드 (선택사항):</label>
+                            <input type="file" id="stage6Image" accept="image/*" onchange="handleImageUpload(6, this)">
+                            <div id="stage6ImagePreview" class="image-preview"></div>
+                        </div>
+                        <div class="text-feedback-section" id="stage6TextFeedback"></div>
+                        <div class="reflection-section">
+                            <h3>🤔 성찰하기 - 전이하기 (Transferring)</h3>
+                            <div class="reflection-checklist">
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="6" data-item="1">
+                                        <span class="checkmark"></span>
+                                        이번 탐구에서 얻은 지식을 다른 상황이나 문제에 적용할 수 있다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="6" data-item="2">
+                                        <span class="checkmark"></span>
+                                        실생활에서 실행 가능한 해결 방안을 제시했다.
+                                    </label>
+                                </div>
+                                <div class="reflection-checkbox-item">
+                                    <label class="reflection-checkbox-label">
+                                        <input type="checkbox" class="reflection-checkbox" data-stage="6" data-item="3">
+                                        <span class="checkmark"></span>
+                                        이번 탐구를 통해 내 생각이나 행동에 변화가 생겼다.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="follow-up-actions">
+                                <button class="btn-follow-up-stage" onclick="showStageFollowUp(6)">
+                                    💡 후속 탐구 활용 방안 및 추가 자료 보기
+                                </button>
+                                <div class="stage-follow-up-content" id="stageFollowUp6" style="display: none;">
+                                    <div class="follow-up-suggestions">
+                                        <h4>🔄 후속 탐구 활용 방안</h4>
+                                        <div id="followUpSuggestions6"></div>
+                                    </div>
+                                    <div class="additional-resources">
+                                        <h4>📚 추가 자료 제안</h4>
+                                        <div id="additionalResources6"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>

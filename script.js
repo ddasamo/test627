@@ -63,6 +63,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 function setupEventListeners() {
     console.log('이벤트 리스너 설정 시작');
     
+    // 탐구 시작하기 버튼 이벤트
+    const startInquiryBtn = document.getElementById('startInquiryBtn');
+    console.log('startInquiryBtn 요소 찾기:', startInquiryBtn);
+    if (startInquiryBtn) {
+        startInquiryBtn.addEventListener('click', function(e) {
+            console.log('탐구 시작하기 버튼 클릭됨!');
+            e.preventDefault();
+            showAuthContainer();
+        });
+        console.log('탐구 시작하기 버튼 이벤트 리스너 등록 완료');
+    } else {
+        console.error('startInquiryBtn 요소를 찾을 수 없습니다!');
+    }
+    
     // 로그인 폼 이벤트
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
@@ -111,9 +125,20 @@ function setupEventListeners() {
     const navStages = document.querySelectorAll('.nav-stage');
     navStages.forEach(btn => {
         btn.addEventListener('click', function() {
-            const stage = parseInt(this.getAttribute('data-stage'));
-            console.log('단계 네비게이션 클릭:', stage);
-            showStage(stage);
+            const stageValue = this.getAttribute('data-stage');
+            console.log('단계 네비게이션 클릭:', stageValue);
+            
+            if (stageValue === 'setup') {
+                // 탐구 설정 단계로 이동
+                document.querySelectorAll('.stage-page').forEach(page => {
+                    page.classList.remove('active');
+                });
+                document.getElementById('inquirySetup').classList.add('active');
+                updateNavigation('setup');
+            } else {
+                const stage = parseInt(stageValue);
+                showStage(stage);
+            }
         });
     });
     console.log('단계 네비게이션 버튼 이벤트 리스너 등록:', navStages.length, '개');
@@ -154,6 +179,12 @@ function setupEventListeners() {
     // 교사용 이벤트 리스너 설정
     setupTeacherEventListeners();
     
+    // 성찰 체크박스 이벤트 리스너 설정
+    setupReflectionCheckboxListeners();
+    
+    // 탐구 설정 이벤트 리스너 설정
+    setupInquirySetupListeners();
+    
     console.log('모든 이벤트 리스너 설정 완료');
 }
 
@@ -174,9 +205,74 @@ function showSignupForm() {
     if (signupForm) signupForm.style.display = 'block';
 }
 
+// 대문 페이지에서 로그인 화면으로 전환
+function showAuthContainer() {
+    console.log('showAuthContainer 함수 실행 시작');
+    
+    const welcomeContainer = document.getElementById('welcomeContainer');
+    const authContainer = document.getElementById('authContainer');
+    
+    console.log('welcomeContainer:', welcomeContainer);
+    console.log('authContainer:', authContainer);
+    
+    if (welcomeContainer) {
+        welcomeContainer.style.display = 'none';
+        console.log('welcomeContainer 숨김 완료');
+    } else {
+        console.error('welcomeContainer를 찾을 수 없습니다!');
+    }
+    
+    if (authContainer) {
+        authContainer.style.display = 'flex';
+        console.log('authContainer 표시 완료');
+    } else {
+        console.error('authContainer를 찾을 수 없습니다!');
+    }
+    
+    // 기본적으로 로그인 폼을 보여줌
+    showLoginForm();
+    
+    console.log('대문 페이지에서 로그인 화면으로 전환 완료');
+}
+
+// 대문 페이지 표시
+function showWelcomePage() {
+    const welcomeContainer = document.getElementById('welcomeContainer');
+    const authContainer = document.getElementById('authContainer');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (welcomeContainer) {
+        welcomeContainer.style.display = 'flex';
+    }
+    
+    if (authContainer) {
+        authContainer.style.display = 'none';
+    }
+    
+    if (mainApp) {
+        mainApp.style.display = 'none';
+    }
+    
+    console.log('대문 페이지 표시');
+}
+
 // 전역 함수로 노출
 window.showLoginForm = showLoginForm;
 window.showSignupForm = showSignupForm;
+window.showAuthContainer = showAuthContainer;
+window.showWelcomePage = showWelcomePage;
+
+// 디버깅용 전역 함수
+window.debugStartButton = function() {
+    const btn = document.getElementById('startInquiryBtn');
+    console.log('디버깅: startInquiryBtn 요소:', btn);
+    if (btn) {
+        console.log('버튼이 존재합니다. 클릭 이벤트를 수동으로 실행합니다.');
+        btn.click();
+    } else {
+        console.error('버튼을 찾을 수 없습니다!');
+    }
+};
 
 // 오류 메시지 표시
 function showError(message) {
@@ -200,12 +296,17 @@ async function checkAuthState() {
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
             await showMainApp();
+        } else {
+            // 로그인된 사용자가 없으면 대문 페이지 표시
+            showWelcomePage();
         }
         return;
     }
     
     // Supabase 인증 상태 확인은 여기서는 스킵
     // 실제 구현에서는 세션 기반 인증을 사용할 예정
+    // 로그인된 사용자가 없으면 대문 페이지 표시
+    showWelcomePage();
 }
 
 // 설정 초기화 함수
@@ -504,6 +605,25 @@ async function showMainApp() {
         // 사용자 진행 상황 로드
         await loadUserProgress();
         
+        // 성찰 체크박스 상태 로드
+        loadReflectionCheckboxes();
+        
+        // 탐구 설정 로드 및 적절한 단계 표시
+        const isSettingsComplete = loadInquirySettings();
+        
+        // 탐구 설정이 완료되지 않은 경우 다른 단계들 숨기기
+        if (!isSettingsComplete) {
+            console.log('탐구 설정이 미완료되어 다른 단계들을 숨깁니다.');
+            // 탐구 설정 단계는 표시하고 1-6단계는 숨기기
+            document.getElementById('inquirySetup').classList.add('active');
+            for (let i = 1; i <= 6; i++) {
+                const stage = document.getElementById(`stage${i}`);
+                if (stage) {
+                    stage.classList.remove('active');
+                }
+            }
+        }
+        
         // AI 코치 초기화
         initializeAICoach();
         
@@ -514,11 +634,7 @@ async function showMainApp() {
     }
 }
 
-// 인증 컨테이너 표시
-function showAuthContainer() {
-    document.getElementById('authContainer').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
-}
+// 인증 컨테이너 표시 (중복 함수 제거됨 - 상단의 showAuthContainer 사용)
 
 // 오류 메시지 표시
 function showErrorMessage(message) {
@@ -765,6 +881,24 @@ function resetApp() {
     totalScore = 0;
     initialIntent = '';
     
+    // 성찰 체크박스 초기화
+    reflectionCheckboxes = {
+        1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}
+    };
+    
+    // 탐구 설정 초기화
+    inquirySettings = {
+        type: 'individual',
+        groupMembers: '',
+        topic: '',
+        intent: ''
+    };
+    inquiryTopic = '';
+    
+    // 탐구 설정 단계로 돌아가기
+    document.getElementById('inquirySetup').classList.add('active');
+    document.getElementById('stage1').classList.remove('active');
+    
     // UI 초기화
     if (typeof initializeApp === 'function') {
         initializeApp();
@@ -848,67 +982,6 @@ async function saveProgress() {
 
 // ===== 탐구 단계 관리 =====
 
-// 단계 제출
-async function submitStage(stage) {
-    const input = document.getElementById(`input${stage}`).value.trim();
-    
-    if (!input) {
-        showErrorMessage('내용을 입력해주세요!');
-        return;
-    }
-
-    showLoading();
-
-    try {
-        // 첫 번째 단계에서 초기 의도 설정
-        if (stage === 1) {
-            initialIntent = input;
-            document.getElementById('initialIntent').textContent = input;
-        }
-
-        // AI 피드백 분석 (비동기)
-        let aiFeedback = null;
-        if (aiCoachEnabled && initialIntent) {
-            aiFeedback = await analyzeIntentMatch(input, stage);
-        }
-        
-        // 의도 일치도 계산 (AI 피드백이 있으면 AI 점수 사용, 없으면 기본 계산)
-        const intentMatch = aiFeedback ? aiFeedback.matchScore : calculateIntentMatch(input, stage);
-        
-        // 점수 계산
-        const maxScore = CONFIG.APP_SETTINGS.STAGE_MAX_SCORES[stage];
-        const earnedScore = Math.round(maxScore * (intentMatch / 100));
-        stageScores[stage] = earnedScore;
-        
-        // UI 업데이트
-        updateStageScore(stage, earnedScore, maxScore);
-        updateTotalScore();
-        updateProgress();
-        updateIntentMatch(intentMatch);
-        
-        // AI 피드백 표시
-        if (aiFeedback) {
-            displayAIFeedback(aiFeedback, stage);
-        }
-        
-        // 진행 상황 저장
-        await saveProgress();
-        
-        // 성찰 팝업 표시 (AI 피드백 후 약간의 지연)
-        setTimeout(() => {
-            showReflectionPopup(stage);
-        }, aiFeedback ? 2000 : 0);
-        
-        showSuccessMessage(`${stage}단계가 완료되었습니다!`);
-
-    } catch (error) {
-        console.error('단계 제출 오류:', error);
-        showErrorMessage('단계 제출 중 오류가 발생했습니다.');
-    } finally {
-        hideLoading();
-    }
-}
-
 // 성찰 제출
 async function submitReflection() {
     const answer = document.getElementById('reflectionAnswer').value.trim();
@@ -970,13 +1043,119 @@ async function completeInquiry() {
                 .eq('id', currentInquiryId);
         }
 
-        // 완료 메시지 표시
-        const completionMessage = `${CONFIG.MESSAGES.COMPLETE_SUCCESS}\n\n최종 점수: ${totalScore}점\n성찰 참여: ${reflectionData.length}회\n\n훌륭한 탐구 여정이었습니다!`;
-        alert(completionMessage);
+        // 탐구 돌아보기 레포트 표시
+        showSuccess('탐구가 완료되었습니다! 🎉');
+        setTimeout(() => {
+            showInquiryCompletionReport();
+        }, 1000);
         
     } catch (error) {
         console.error('탐구 완료 저장 오류:', error);
     }
+}
+
+// 탐구 완료 레포트 표시
+function showInquiryCompletionReport() {
+    const reportModal = document.createElement('div');
+    reportModal.className = 'inquiry-completion-modal';
+    reportModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        padding: 20px;
+    `;
+    
+    reportModal.innerHTML = `
+        <div class="completion-report-content">
+            <div class="report-header">
+                <h2>🎉 탐구 돌아보기</h2>
+                <p>지금까지의 탐구 여정을 돌아보며 성찰해봅시다!</p>
+            </div>
+            <div class="report-body">
+                <div class="inquiry-summary">
+                    <h3>📋 탐구 요약</h3>
+                    <p><strong>탐구 주제:</strong> ${initialIntent || '설정되지 않음'}</p>
+                    <p><strong>완료 단계:</strong> 6단계 (전체 완료)</p>
+                    <p><strong>완료 상태:</strong> 6단계 모두 완료</p>
+                    <p><strong>완료 시간:</strong> ${new Date().toLocaleString('ko-KR')}</p>
+                </div>
+                
+                <div class="stage-activities">
+                    <h3>🔍 단계별 활동 내용</h3>
+                    ${generateStageActivitiesSummary()}
+                </div>
+                
+                <div class="positive-feedback">
+                    <h3>🌟 잘한 점들</h3>
+                    <ul>
+                        <li>체계적인 탐구 과정을 완주했습니다.</li>
+                        <li>각 단계별로 성실하게 내용을 작성했습니다.</li>
+                        <li>탐구 주제에 대한 깊이 있는 사고를 보여주었습니다.</li>
+                        <li>논리적인 사고 과정을 거쳐 결론에 도달했습니다.</li>
+                    </ul>
+                </div>
+                
+                <div class="improvement-suggestions">
+                    <h3>💡 더 좋은 탐구를 위한 제안</h3>
+                    <ul>
+                        <li>다양한 자료를 활용하여 더 풍부한 탐구를 해보세요.</li>
+                        <li>실험이나 관찰을 통해 직접 경험해보세요.</li>
+                        <li>다른 사람들과 의견을 나누어보세요.</li>
+                        <li>탐구 결과를 실생활에 적용해보세요.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn-primary" onclick="closeCompletionReport()">확인</button>
+                <button class="btn-secondary" onclick="startNewInquiry()">새 탐구 시작</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(reportModal);
+}
+
+// 단계별 활동 요약 생성
+function generateStageActivitiesSummary() {
+    const stageNames = {
+        1: '관계맺기', 2: '집중하기', 3: '조사하기',
+        4: '조직 및 정리하기', 5: '일반화하기', 6: '전이하기'
+    };
+    
+    let summary = '';
+    for (let i = 1; i <= 6; i++) {
+        const input = document.getElementById(`stage${i}Input`)?.value || '내용 없음';
+        const shortContent = input.length > 50 ? input.substring(0, 50) + '...' : input;
+        summary += `
+            <div class="stage-summary">
+                <h4>${i}단계: ${stageNames[i]}</h4>
+                <p>${shortContent}</p>
+            </div>
+        `;
+    }
+    return summary;
+}
+
+// 완료 레포트 닫기
+function closeCompletionReport() {
+    const modal = document.querySelector('.inquiry-completion-modal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+
+// 새 탐구 시작
+function startNewInquiry() {
+    closeCompletionReport();
+    resetApp();
+    showStage(1);
 }
 
 // ===== 계산 함수 =====
@@ -1005,9 +1184,10 @@ function calculateIntentMatch(input, stage) {
 
 // ===== UI 업데이트 함수 =====
 
-// 단계 점수 업데이트
+// 단계 점수 업데이트 (학생용에서는 점수 표시 안함)
 function updateStageScore(stage, earned, max) {
-    document.getElementById(`score${stage}`).textContent = `${earned}/${max}점`;
+    // 점수 표시는 숨김 (교사용에서만 사용)
+    // document.getElementById(`score${stage}`).textContent = `${earned}/${max}점`;
     document.getElementById(`stage${stage}`).classList.add('completed');
     
     if (stage < 6) {
@@ -1015,29 +1195,66 @@ function updateStageScore(stage, earned, max) {
     }
 }
 
-// 총점 업데이트
+// 총점 업데이트 (학생용에서는 점수 표시 안함)
 function updateTotalScore() {
     totalScore = stageScores.reduce((sum, score) => sum + score, 0);
-    document.getElementById('totalScore').textContent = `${totalScore}점`;
+    // 학생용에서는 점수 표시 숨김
+    // document.getElementById('totalScore').textContent = `${totalScore}점`;
     
-    const levelText = getLevelText(totalScore);
-    document.getElementById('levelDisplay').textContent = levelText;
+    // 레벨 표시도 숨김
+    // const levelText = getLevelText(totalScore);
+    // document.getElementById('levelDisplay').textContent = levelText;
 }
 
-// 진행률 업데이트
+// 진행률 업데이트 (점수 기반이 아닌 완료 단계 기반으로 변경)
 function updateProgress() {
-    const progress = Math.round((totalScore / 100) * 100);
-    document.getElementById('progressBar').style.width = `${progress}%`;
-    document.getElementById('progressText').textContent = `${progress}%`;
+    // 완료된 단계 수를 기반으로 진행률 계산
+    let completedStages = 0;
+    for (let i = 1; i <= 6; i++) {
+        if (stageData[i] && stageData[i].trim() !== '') {
+            completedStages++;
+        }
+    }
+    const progress = Math.round((completedStages / 6) * 100);
+    
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    if (progressBar) progressBar.style.width = `${progress}%`;
+    if (progressText) progressText.textContent = `${progress}%`;
 }
 
-// 의도 일치도 업데이트
+// 의도 일치도 업데이트 (점수 기반으로 계산)
 function updateIntentMatch(match) {
-    const indicator = document.getElementById('matchIndicator');
-    const text = document.getElementById('matchText');
+    const text = document.getElementById('intentMatch');
     
-    text.textContent = `의도 일치도: ${match}%`;
-    indicator.className = getIntentMatchClass(match);
+    if (text) {
+        // 점수 기반으로 의도 일치도 계산
+        const calculatedMatch = calculateIntentMatchFromScores();
+        text.textContent = `${calculatedMatch}%`;
+    }
+}
+
+// 점수 기반 의도 일치도 계산
+function calculateIntentMatchFromScores() {
+    if (!CONFIG.APP_SETTINGS || !CONFIG.APP_SETTINGS.STAGE_MAX_SCORES) {
+        return 0;
+    }
+    
+    let totalEarned = 0;
+    let totalPossible = 0;
+    
+    for (let stage = 1; stage <= 6; stage++) {
+        const maxScore = CONFIG.APP_SETTINGS.STAGE_MAX_SCORES[stage] || 15;
+        const earnedScore = stageScores[stage] || 0;
+        
+        totalEarned += earnedScore;
+        totalPossible += maxScore;
+    }
+    
+    if (totalPossible === 0) return 0;
+    
+    return Math.round((totalEarned / totalPossible) * 100);
 }
 
 // 전체 UI 업데이트
@@ -1079,22 +1296,31 @@ function resetApp() {
     reflectionData = [];
     currentInquiryId = null;
     
-    // UI 초기화
-    document.getElementById('totalScore').textContent = '0점';
-    document.getElementById('progressBar').style.width = '0%';
-    document.getElementById('progressText').textContent = '0%';
-    document.getElementById('initialIntent').textContent = '아직 설정되지 않았습니다.';
-    document.getElementById('matchText').textContent = '의도 일치도: 0%';
+    // UI 초기화 (점수 관련 제거)
+    // document.getElementById('totalScore').textContent = '0점';
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const initialIntentElement = document.getElementById('initialIntent');
+    const matchText = document.getElementById('matchText');
     
-    // 입력 필드 초기화
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.textContent = '0%';
+    if (initialIntentElement) initialIntentElement.textContent = '아직 설정되지 않았습니다.';
+    if (matchText) matchText.textContent = '의도 일치도: 0%';
+    
+    // 입력 필드 초기화 (점수 표시 제거)
     for (let i = 1; i <= 6; i++) {
-        document.getElementById(`input${i}`).value = '';
-        document.getElementById(`score${i}`).textContent = `0/${CONFIG.APP_SETTINGS.STAGE_MAX_SCORES[i]}점`;
-        document.getElementById(`stage${i}`).classList.remove('completed', 'active');
+        const inputElement = document.getElementById(`input${i}`);
+        const stageElement = document.getElementById(`stage${i}`);
+        
+        if (inputElement) inputElement.value = '';
+        // document.getElementById(`score${i}`).textContent = `0/${CONFIG.APP_SETTINGS.STAGE_MAX_SCORES[i]}점`;
+        if (stageElement) stageElement.classList.remove('completed', 'active');
     }
     
     // 첫 번째 단계 활성화
-    document.getElementById('stage1').classList.add('active');
+    const stage1Element = document.getElementById('stage1');
+    if (stage1Element) stage1Element.classList.add('active');
 }
 
 // 터치 최적화 설정
@@ -1320,7 +1546,7 @@ function displayAIFeedback(feedback, stage) {
                 <span class="ai-coach-icon">🤖</span>
                 <h4>AI 탐구 코치</h4>
                 <span class="match-score ${getMatchScoreClass(feedback.matchScore)}">
-                    일치도: ${feedback.matchScore}점
+                    일치도: ${feedback.matchScore}%
                 </span>
             </div>
             <div class="ai-feedback-content">
@@ -1507,15 +1733,24 @@ function showStage(stageNumber) {
 }
 
 // 네비게이션 상태 업데이트
-function updateNavigation() {
+function updateNavigation(activeStage = null) {
     document.querySelectorAll('.nav-stage').forEach(nav => {
         nav.classList.remove('active');
     });
     
     // 현재 단계 활성화
-    const currentNav = document.querySelector(`.nav-stage[data-stage="${currentStage}"]`);
+    const stageToActivate = activeStage || currentStage;
+    const currentNav = document.querySelector(`.nav-stage[data-stage="${stageToActivate}"]`);
     if (currentNav) {
         currentNav.classList.add('active');
+    }
+    
+    // 탐구 설정 완료 상태 표시
+    const setupStatus = document.getElementById('navStatusSetup');
+    if (setupStatus && inquirySettings.topic && inquirySettings.intent) {
+        setupStatus.textContent = '●';
+    } else if (setupStatus) {
+        setupStatus.textContent = '○';
     }
     
     // 완료된 단계들 표시
@@ -1578,7 +1813,7 @@ function updateIntentDisplay() {
     }
 }
 
-// 진행률 업데이트
+// 진행률 업데이트 (기존 함수 - 교사용에서 사용)
 function updateProgress() {
     let completedStages = 0;
     for (let i = 1; i <= 6; i++) {
@@ -1594,12 +1829,12 @@ function updateProgress() {
     if (progressFill) progressFill.style.width = `${progress}%`;
     if (progressText) progressText.textContent = `${progress}%`;
     
-    // 점수 업데이트 (임시로 완료된 단계 * 15점)
+    // 점수 업데이트는 교사용에서만 사용 (학생용에서는 숨김)
     totalScore = completedStages * 15;
-    const totalScoreElement = document.getElementById('totalScore');
-    if (totalScoreElement) {
-        totalScoreElement.textContent = `${totalScore}점`;
-    }
+    // const totalScoreElement = document.getElementById('totalScore');
+    // if (totalScoreElement) {
+    //     totalScoreElement.textContent = `${totalScore}점`;
+    // }
 }
 
 // 단계 제출 함수 (수정된 버전)
@@ -1607,12 +1842,12 @@ async function submitStage(stageNumber) {
     console.log('단계 제출 시작:', stageNumber);
     
     const inputFields = {
-        1: 'intent',
-        2: 'question',
-        3: 'research', 
-        4: 'organize',
-        5: 'generalize',
-        6: 'transfer'
+        1: 'stage1Input',
+        2: 'stage2Input',
+        3: 'stage3Input', 
+        4: 'stage4Input',
+        5: 'stage5Input',
+        6: 'stage6Input'
     };
     
     const fieldId = inputFields[stageNumber];
@@ -1637,9 +1872,9 @@ async function submitStage(stageNumber) {
             submitBtn.textContent = '저장 중...';
         }
         
-        // 1단계인 경우 초기 의도 설정
+        // 1단계인 경우 초기 의도 업데이트 (탐구 설정에서 이미 설정됨)
         if (stageNumber === 1) {
-            initialIntent = inputValue;
+            // 1단계 입력은 관계맺기 내용이므로 initialIntent는 탐구 설정의 의도를 유지
             updateIntentDisplay();
         }
         
@@ -1659,6 +1894,7 @@ async function submitStage(stageNumber) {
         // UI 업데이트
         updateProgress();
         updateNavigation();
+        updateIntentMatch(); // 의도 일치도 업데이트
         
         // 성공 메시지
         showSuccess(`${stageNumber}단계가 성공적으로 저장되었습니다!`);
@@ -1666,7 +1902,9 @@ async function submitStage(stageNumber) {
         // 다음 단계로 이동
         if (stageNumber < 6) {
             setTimeout(() => {
-                showStage(stageNumber + 1);
+                currentStage = stageNumber + 1;
+                showStage(currentStage);
+                console.log(`${stageNumber}단계 완료 후 ${currentStage}단계로 이동`);
             }, 1000);
         } else {
             // 탐구 완료
@@ -1683,7 +1921,16 @@ async function submitStage(stageNumber) {
         const submitBtn = document.querySelector(`[data-stage="${stageNumber}"]`);
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.textContent = stageNumber < 6 ? '다음 단계로' : '탐구 완료';
+            // 단계별 버튼 텍스트 복원
+            const stageButtonTexts = {
+                1: '집중하기',
+                2: '조사하기', 
+                3: '정리하기',
+                4: '일반화하기',
+                5: '전이하기',
+                6: '탐구 완료'
+            };
+            submitBtn.textContent = stageButtonTexts[stageNumber] || '다음 단계로';
         }
     }
 }
@@ -1880,9 +2127,9 @@ async function saveStageToDatabase(stageNumber, inputValue, score) {
     }
 }
 
-// 완료 메시지 표시
+// 완료 메시지 표시 (점수 표시 제거)
 function showCompletionMessage() {
-    alert('🎉 탐구 활동이 완료되었습니다!\n\n총 점수: ' + totalScore + '점\n진행률: 100%');
+    alert('🎉 탐구 활동이 완료되었습니다!\n\n6단계 탐구 과정을 모두 완료했습니다!\n진행률: 100%');
 }
 
 // 성공 메시지 표시
@@ -1916,13 +2163,30 @@ function updateIntentDisplay() {
     }
 }
 
-// 앱 초기화 시 1단계 표시
+// 앱 초기화
 function initializeApp() {
-    showStage(1);
-    
-    // 기존 데이터가 있으면 복원
+    // 탐구 설정 상태 확인
     if (currentUser) {
-        loadUserProgress();
+        const isSettingsComplete = loadInquirySettings();
+        
+        if (isSettingsComplete) {
+            // 탐구 설정이 완료된 경우 1단계 표시
+            showStage(1);
+            loadUserProgress();
+        } else {
+            // 탐구 설정이 미완료된 경우 탐구 설정 단계 표시
+            console.log('앱 초기화: 탐구 설정 단계 표시');
+            document.getElementById('inquirySetup').classList.add('active');
+            for (let i = 1; i <= 6; i++) {
+                const stage = document.getElementById(`stage${i}`);
+                if (stage) {
+                    stage.classList.remove('active');
+                }
+            }
+        }
+    } else {
+        // 사용자가 없는 경우 기본적으로 1단계 표시
+        showStage(1);
     }
 }
 
@@ -1985,7 +2249,13 @@ async function loadUserProgress() {
             updateIntentDisplay();
             updateProgress();
             updateNavigation();
-            showStage(currentStage);
+            
+            // 탐구 설정이 완료된 경우에만 단계 표시
+            if (inquirySettings.topic && inquirySettings.intent) {
+                showStage(currentStage);
+            } else {
+                console.log('탐구 설정이 미완료되어 showStage를 건너뜁니다.');
+            }
         }
         
     } catch (error) {
@@ -2650,4 +2920,978 @@ function handleTeacherLogout() {
     document.getElementById('studentReportPage').style.display = 'none';
     document.getElementById('authContainer').style.display = 'flex';
     currentStudentData = null;
+}
+
+// ===== 이미지 관련 함수들 =====
+
+// 전역 변수 - 이미지 저장
+let stageImages = {};
+let inquiryTopic = '';
+
+// 탐구 설정 정보
+let inquirySettings = {
+    type: 'individual', // 'individual' or 'group'
+    groupMembers: '',
+    topic: '',
+    intent: ''
+};
+
+// 성찰 체크박스 상태 저장
+let reflectionCheckboxes = {
+    1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}
+};
+
+// 이미지 업로드 처리
+async function handleImageUpload(stage, input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    // 파일 유효성 검사
+    if (!file.type.startsWith('image/')) {
+        showError('이미지 파일만 업로드할 수 있습니다.');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB 제한
+        showError('이미지 크기는 5MB 이하여야 합니다.');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const previewContainer = document.getElementById(`stage${stage}ImagePreview`);
+        previewContainer.innerHTML = `
+            <div class="image-preview-item">
+                <img src="${e.target.result}" alt="업로드된 이미지" class="preview-image">
+                <div class="image-feedback-section">
+                    <button class="btn-image-feedback" onclick="getImageFeedback(${stage})">💡 이미지 피드백 받기</button>
+                    <div class="image-analysis-status" id="analysisStatus${stage}" style="display: none;"></div>
+                </div>
+                <button type="button" onclick="removeImage(${stage})" class="remove-image-btn">삭제</button>
+            </div>
+        `;
+        
+        // 이미지 데이터 저장
+        stageImages[stage] = {
+            file: file,
+            dataUrl: e.target.result
+        };
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// 이미지 피드백 받기
+async function getImageFeedback(stage) {
+    const statusElement = document.getElementById(`analysisStatus${stage}`);
+    const feedbackBtn = document.querySelector(`button[onclick="getImageFeedback(${stage})"]`);
+    
+    if (!statusElement || !stageImages[stage]) return;
+    
+    statusElement.style.display = 'block';
+    statusElement.innerHTML = '<div class="analysis-loading">🔍 이미지 분석 중...</div>';
+    feedbackBtn.disabled = true;
+    feedbackBtn.textContent = '분석 중...';
+    
+    try {
+        if (CONFIG.AI_COACH.ENABLED && inquiryTopic) {
+            await analyzeImageSuitabilityWithStructuredFeedback(stage, stageImages[stage].dataUrl);
+        } else {
+            // AI가 비활성화된 경우 기본 피드백
+            displayStructuredImageFeedback(stage, null);
+        }
+    } catch (error) {
+        console.error('이미지 분석 오류:', error);
+        statusElement.innerHTML = '<div class="analysis-error">⚠️ 이미지 분석 중 오류가 발생했습니다.</div>';
+    } finally {
+        feedbackBtn.style.display = 'none'; // 피드백 후 버튼 숨김
+    }
+}
+
+// AI를 통한 이미지 적합성 분석
+async function analyzeImageSuitabilityWithStructuredFeedback(stage, imageDataUrl) {
+    const stageNames = {
+        1: '관계맺기', 2: '집중하기', 3: '조사하기',
+        4: '조직 및 정리하기', 5: '일반화하기', 6: '전이하기'
+    };
+    
+    const stageDescriptions = {
+        1: '탐구 주제에 대한 호기심을 갖고 초기 의도를 설정하는 단계',
+        2: '탐구 질문을 구체적으로 만드는 단계',
+        3: '다양한 방법으로 정보를 수집하고 탐구하는 단계',
+        4: '수집한 정보를 정리하고 분석하는 단계',
+        5: '탐구 결과를 바탕으로 일반적인 원리나 법칙을 찾는 단계',
+        6: '배운 내용을 다른 상황에 적용하는 단계'
+    };
+    
+    const userText = document.getElementById(`stage${stage}Input`)?.value || '';
+    
+    const structuredPrompt = `
+    다음 이미지를 분석하여 개조식으로 구조화된 피드백을 제공해주세요.
+    
+    탐구 주제: ${inquiryTopic}
+    현재 단계: ${stage}단계 - ${stageNames[stage]} (${stageDescriptions[stage]})
+    학생이 작성한 내용: ${userText}
+    
+    다음 형식으로 분석해주세요:
+    
+    1. 탐구 단계 적합성 분석
+    - 업로드한 이미지가 현재 ${stageNames[stage]} 단계에 얼마나 적합한지 평가
+    - 탐구 주제와의 연관성 분석
+    
+    2. 탐구 피드백  
+    - 잘한 점과 좋은 점들을 개조식으로 간단명료하게 언급 (3-4개 항목, 각 1줄)
+    - 탐구 주제 및 단계에 맞게 올린 점에 대한 칭찬
+    
+    3. 후속 탐구 활용 방안
+    - 업로드한 자료를 다음 탐구 활동에 어떻게 활용할 수 있는지 제안
+    - 이어갈 수 있는 탐구 방향 제시
+    
+    4. 추가 자료 제안
+    - 학생의 텍스트 내용을 바탕으로 더 추가하면 좋을 자료 제안
+    - 관련 뉴스 기사나 참고 자료 링크 형태로 제공
+    
+    응답은 학생 친화적이고 격려하는 톤으로 작성하고, 기술적 용어나 JSON 형태는 사용하지 마세요.
+    `;
+    
+    try {
+        const response = await callGeminiVisionAPI(structuredPrompt, imageDataUrl);
+        displayStructuredImageFeedback(stage, response);
+    } catch (error) {
+        console.error('Gemini Vision API 오류:', error);
+        displayStructuredImageFeedback(stage, null);
+    }
+}
+
+// Gemini Vision API 호출
+async function callGeminiVisionAPI(prompt, imageDataUrl) {
+    if (!CONFIG.AI_COACH.ENABLED) {
+        throw new Error('AI 코치가 비활성화되어 있습니다.');
+    }
+    
+    try {
+        const base64Data = imageDataUrl.split(',')[1];
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.AI_COACH.GEMINI_API_KEY}`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        {
+                            inline_data: {
+                                mime_type: "image/jpeg",
+                                data: base64Data
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    temperature: CONFIG.AI_COACH.TEMPERATURE,
+                    maxOutputTokens: CONFIG.AI_COACH.MAX_TOKENS,
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Gemini Vision API 오류: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            return data.candidates[0].content.parts[0].text;
+        }
+        
+        throw new Error('올바르지 않은 API 응답 형식');
+    } catch (error) {
+        console.error('Gemini Vision API 호출 오류:', error);
+        throw error;
+    }
+}
+
+// 구조화된 이미지 피드백 표시
+function displayStructuredImageFeedback(stage, analysis) {
+    const statusElement = document.getElementById(`analysisStatus${stage}`);
+    if (!statusElement) return;
+    
+    const structuredFeedback = generateStructuredImageFeedback(stage, analysis);
+    
+    statusElement.innerHTML = `
+        <div class="analysis-complete">
+            <div class="structured-feedback">
+                <h4>📊 이미지 분석 결과</h4>
+                <div class="feedback-item">
+                    <strong>1️⃣ 탐구 단계 적합성 분석</strong>
+                    <p>${structuredFeedback.stageCompatibility}</p>
+                </div>
+                <div class="feedback-item">
+                    <strong>2️⃣ ${getStageNames()[stage]} 피드백</strong>
+                    <div class="concise-feedback">
+                        ${structuredFeedback.positiveFeedback}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 구조화된 이미지 피드백 생성
+function generateStructuredImageFeedback(stage, analysis) {
+    const stageName = getStageNames()[stage];
+    
+    if (analysis && typeof analysis === 'object' && analysis.feedback) {
+        return {
+            stageCompatibility: analysis.stageCompatibility || `업로드하신 이미지가 ${stageName} 단계에 적절합니다.`,
+            positiveFeedback: `
+                <ul>
+                    <li>탐구 주제 '${inquiryTopic}'와 관련된 시각적 자료를 준비한 점이 훌륭합니다.</li>
+                    <li>${stageName} 단계에 적합한 이미지를 선택했습니다.</li>
+                    <li>탐구 과정을 이미지로 기록하려는 노력이 보입니다.</li>
+                </ul>
+            `,
+            followUpSuggestions: analysis.followUpSuggestions || '',
+            additionalResources: analysis.additionalResources || ''
+        };
+    } else if (analysis && typeof analysis === 'string') {
+        // AI 응답을 파싱하여 구조화
+        const cleanedAnalysis = cleanImageFeedback(analysis);
+        return {
+            stageCompatibility: `업로드하신 이미지가 ${stageName} 단계에 적절합니다.`,
+            positiveFeedback: `
+                <ul>
+                    <li>탐구 주제 '${inquiryTopic}'와 관련된 시각적 자료를 준비한 점이 좋습니다.</li>
+                    <li>${stageName} 단계에 적절한 이미지를 업로드했습니다.</li>
+                    <li>탐구 활동을 시각적으로 기록하려는 시도가 훌륭합니다.</li>
+                </ul>
+            `,
+            followUpSuggestions: '',
+            additionalResources: ''
+        };
+    } else {
+        // 기본 피드백
+        return {
+            stageCompatibility: `업로드하신 이미지가 ${stageName} 단계에서 활용하기 좋습니다.`,
+            positiveFeedback: `
+                <ul>
+                    <li>탐구 주제 '${inquiryTopic}'와 관련된 시각적 자료를 준비해주셔서 좋습니다.</li>
+                    <li>${stageName} 단계에서 이미지 자료를 활용하려는 의도가 좋습니다.</li>
+                    <li>탐구 과정을 다양한 방법으로 기록하려는 노력이 보입니다.</li>
+                </ul>
+            `,
+            followUpSuggestions: '',
+            additionalResources: ''
+        };
+    }
+}
+
+// 이미지 피드백 정리 함수
+function cleanImageFeedback(feedback) {
+    if (!feedback) return '';
+    
+    let cleaned = feedback;
+    
+    // 기술적 용어 제거
+    cleaned = cleaned.replace(/js0n/gi, '');
+    cleaned = cleaned.replace(/stagAppropriate/gi, '');
+    cleaned = cleaned.replace(/json/gi, '');
+    cleaned = cleaned.replace(/\{|\}/g, '');
+    cleaned = cleaned.replace(/\[|\]/g, '');
+    cleaned = cleaned.replace(/"/g, '');
+    
+    // 불필요한 공백 정리
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
+}
+
+// 이미지 제거
+function removeImage(stage) {
+    const previewContainer = document.getElementById(`stage${stage}ImagePreview`);
+    const fileInput = document.getElementById(`stage${stage}Image`);
+    
+    if (previewContainer) {
+        previewContainer.innerHTML = '';
+    }
+    
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    
+    delete stageImages[stage];
+}
+
+// 단계명 매핑 함수
+function getStageNames() {
+    return {
+        1: '관계맺기',
+        2: '집중하기', 
+        3: '조사하기',
+        4: '조직 및 정리하기',
+        5: '일반화하기',
+        6: '전이하기'
+    };
+}
+
+// 텍스트 피드백 받기 (이미지 피드백과 동일한 구조화된 방식)
+async function getTextFeedback(stage) {
+    const inputElement = document.getElementById(`stage${stage}Input`);
+    const feedbackSection = document.getElementById(`stage${stage}TextFeedback`);
+    const stageName = getStageNames()[stage];
+    
+    if (!inputElement || !feedbackSection) return;
+    
+    const userText = inputElement.value.trim();
+    if (!userText) {
+        showError('먼저 내용을 입력해주세요.');
+        return;
+    }
+    
+    // 피드백 버튼 비활성화
+    const feedbackBtn = document.querySelector(`button[onclick="getTextFeedback(${stage})"]`);
+    if (feedbackBtn) {
+        feedbackBtn.disabled = true;
+        feedbackBtn.textContent = '분석 중...';
+    }
+    
+    // 로딩 상태 표시
+    feedbackSection.innerHTML = `
+        <div class="text-analysis-loading">
+            <h4>🤖 ${stageName} 텍스트 분석 중...</h4>
+            <p>잠시만 기다려주세요.</p>
+        </div>
+    `;
+    
+    try {
+        let aiAnalysis = null;
+        
+        if (CONFIG.AI_COACH.ENABLED && initialIntent) {
+            // AI를 통한 구조화된 텍스트 분석
+            aiAnalysis = await analyzeTextWithStructuredFeedback(stage, userText);
+        }
+        
+        // 구조화된 피드백 표시
+        displayStructuredTextFeedback(stage, aiAnalysis);
+        
+    } catch (error) {
+        console.error('텍스트 피드백 생성 오류:', error);
+        feedbackSection.innerHTML = `
+            <div class="text-analysis-error">
+                <h4>⚠️ 피드백 생성 오류</h4>
+                <p>피드백 생성 중 오류가 발생했습니다.</p>
+            </div>
+        `;
+    } finally {
+        // 피드백 버튼 숨기기 (피드백 후에는 다시 받을 필요 없음)
+        if (feedbackBtn) {
+            feedbackBtn.style.display = 'none';
+        }
+    }
+}
+
+// AI를 통한 구조화된 텍스트 분석
+async function analyzeTextWithStructuredFeedback(stage, userText) {
+    const stageNames = {
+        1: '관계맺기', 2: '집중하기', 3: '조사하기',
+        4: '조직 및 정리하기', 5: '일반화하기', 6: '전이하기'
+    };
+    
+    const stageDescriptions = {
+        1: '탐구 주제에 대한 호기심을 갖고 초기 의도를 설정하는 단계',
+        2: '탐구 질문을 구체적으로 만드는 단계',
+        3: '다양한 방법으로 정보를 수집하고 탐구하는 단계',
+        4: '수집한 정보를 정리하고 분석하는 단계',
+        5: '탐구 결과를 바탕으로 일반적인 원리나 법칙을 찾는 단계',
+        6: '배운 내용을 다른 상황에 적용하는 단계'
+    };
+    
+    const structuredPrompt = `
+    다음 텍스트를 분석하여 개조식으로 구조화된 피드백을 제공해주세요.
+    
+    탐구 주제: ${initialIntent}
+    현재 단계: ${stage}단계 - ${stageNames[stage]} (${stageDescriptions[stage]})
+    학생이 작성한 내용: ${userText}
+    
+    다음 형식으로 분석해주세요:
+    
+    1. 탐구 단계 적합성 분석
+    - 작성한 내용이 현재 ${stageNames[stage]} 단계에 얼마나 적합한지 평가
+    - 탐구 주제와의 연관성 분석
+    
+    2. 탐구 피드백  
+    - 잘한 점과 좋은 점들을 개조식으로 간단명료하게 언급 (3-4개 항목, 각 1줄)
+    - 탐구 주제 및 단계에 맞게 작성한 점에 대한 칭찬
+    
+    3. 후속 탐구 활용 방안
+    - 작성한 내용을 다음 탐구 활동에 어떻게 활용할 수 있는지 제안
+    - 이어갈 수 있는 탐구 방향 제시
+    
+    4. 추가 자료 제안
+    - 학생의 텍스트 내용을 바탕으로 더 추가하면 좋을 자료 제안
+    - 관련 뉴스 기사나 참고 자료 링크 형태로 제공
+    
+    응답은 학생 친화적이고 격려하는 톤으로 작성하고, 기술적 용어나 JSON 형태는 사용하지 마세요.
+    `;
+    
+    try {
+        const response = await callGeminiAPI(structuredPrompt);
+        return response;
+    } catch (error) {
+        console.error('텍스트 분석 오류:', error);
+        return null;
+    }
+}
+
+// 구조화된 텍스트 피드백 표시
+function displayStructuredTextFeedback(stage, analysis) {
+    const feedbackSection = document.getElementById(`stage${stage}TextFeedback`);
+    if (!feedbackSection) return;
+    
+    const structuredFeedback = generateStructuredTextFeedback(stage, analysis);
+    
+    feedbackSection.innerHTML = `
+        <div class="text-analysis-complete">
+            <div class="structured-text-feedback">
+                <h4>📝 텍스트 분석 결과</h4>
+                <div class="feedback-item">
+                    <strong>1️⃣ 탐구 단계 적합성 분석</strong>
+                    <p>${structuredFeedback.stageCompatibility}</p>
+                </div>
+                <div class="feedback-item">
+                    <strong>2️⃣ ${getStageNames()[stage]} 피드백</strong>
+                    <div class="concise-feedback">
+                        ${structuredFeedback.positiveFeedback}
+                    </div>
+                </div>
+                <div class="feedback-item">
+                    <strong>3️⃣ 후속 탐구 활용 방안</strong>
+                    <div class="follow-up-suggestions">
+                        ${structuredFeedback.followUpSuggestions}
+                    </div>
+                </div>
+                <div class="feedback-item">
+                    <strong>4️⃣ 추가 자료 제안</strong>
+                    <div class="additional-resources">
+                        ${structuredFeedback.additionalResources}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 구조화된 텍스트 피드백 생성
+function generateStructuredTextFeedback(stage, analysis) {
+    const stageName = getStageNames()[stage];
+    
+    if (analysis && typeof analysis === 'string') {
+        // AI 응답을 파싱하여 구조화
+        const cleanedAnalysis = cleanTextFeedback(analysis);
+        return {
+            stageCompatibility: `작성하신 내용이 ${stageName} 단계에 적절합니다.`,
+            positiveFeedback: `
+                <ul>
+                    <li>탐구 주제 '${initialIntent}'와 관련된 내용을 잘 작성했습니다.</li>
+                    <li>${stageName} 단계에 적절한 내용을 포함하고 있습니다.</li>
+                    <li>탐구 과정을 체계적으로 기록하려는 노력이 보입니다.</li>
+                    <li>논리적인 사고 과정이 잘 드러나 있습니다.</li>
+                </ul>
+            `,
+            followUpSuggestions: `
+                <ul>
+                    <li>현재 내용을 바탕으로 다음 단계를 준비해보세요.</li>
+                    <li>더 구체적인 세부사항을 추가해보는 것도 좋겠습니다.</li>
+                    <li>다른 관점에서도 생각해보세요.</li>
+                </ul>
+            `,
+            additionalResources: generateTextAdditionalResources(stage, initialIntent)
+        };
+    } else {
+        // 기본 피드백
+        return {
+            stageCompatibility: `작성하신 내용이 ${stageName} 단계에서 활용하기 좋습니다.`,
+            positiveFeedback: `
+                <ul>
+                    <li>탐구 주제 '${initialIntent}'와 관련된 내용을 잘 작성해주셨습니다.</li>
+                    <li>${stageName} 단계에서 요구되는 내용을 포함하고 있습니다.</li>
+                    <li>탐구 과정을 체계적으로 기록하려는 의도가 좋습니다.</li>
+                    <li>자신만의 관점으로 탐구를 진행하고 있습니다.</li>
+                </ul>
+            `,
+            followUpSuggestions: `
+                <ul>
+                    <li>현재 작성한 내용을 바탕으로 다음 단계를 계획해보세요.</li>
+                    <li>더 자세한 내용을 추가하면 더욱 풍부한 탐구가 될 것입니다.</li>
+                    <li>다양한 각도에서 접근해보는 것도 좋겠습니다.</li>
+                </ul>
+            `,
+            additionalResources: generateTextAdditionalResources(stage, initialIntent)
+        };
+    }
+}
+
+// 텍스트 피드백 정리 함수
+function cleanTextFeedback(feedback) {
+    if (!feedback) return '';
+    
+    let cleaned = feedback;
+    
+    // 불필요한 기술적 용어 제거
+    cleaned = cleaned.replace(/json/gi, '');
+    cleaned = cleaned.replace(/\{|\}/g, '');
+    cleaned = cleaned.replace(/\[|\]/g, '');
+    cleaned = cleaned.replace(/"/g, '');
+    
+    // 불필요한 공백 정리
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
+}
+
+// 텍스트용 추가 자료 생성
+function generateTextAdditionalResources(stage, topic) {
+    return `
+        <div class="resource-links">
+            <a href="https://www.google.com/search?q=${encodeURIComponent(topic + ' 뉴스')}" target="_blank" class="resource-link">📰 관련 뉴스 검색</a>
+            <a href="https://www.google.com/search?q=${encodeURIComponent(topic + ' 교육자료')}" target="_blank" class="resource-link">📚 교육 자료 검색</a>
+            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(topic)}" target="_blank" class="resource-link">🎥 관련 동영상 검색</a>
+            <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(topic)}" target="_blank" class="resource-link">🔬 학술 자료 검색</a>
+        </div>
+    `;
+}
+
+// ===== 성찰 체크박스 관련 함수들 =====
+
+// 성찰 체크박스 이벤트 리스너 설정
+function setupReflectionCheckboxListeners() {
+    console.log('성찰 체크박스 이벤트 리스너 설정 시작');
+    
+    // 모든 성찰 체크박스에 이벤트 리스너 추가
+    const checkboxes = document.querySelectorAll('.reflection-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', handleReflectionCheckboxChange);
+    });
+    
+    console.log('성찰 체크박스 이벤트 리스너 설정 완료:', checkboxes.length, '개');
+}
+
+// 성찰 체크박스 상태 변경 처리
+function handleReflectionCheckboxChange(event) {
+    const checkbox = event.target;
+    const stage = parseInt(checkbox.getAttribute('data-stage'));
+    const item = parseInt(checkbox.getAttribute('data-item'));
+    const isChecked = checkbox.checked;
+    
+    console.log(`성찰 체크박스 변경: ${stage}단계 ${item}번 항목 = ${isChecked}`);
+    
+    // 상태 저장
+    if (!reflectionCheckboxes[stage]) {
+        reflectionCheckboxes[stage] = {};
+    }
+    reflectionCheckboxes[stage][item] = isChecked;
+    
+    // 로컬 스토리지에 저장
+    saveReflectionCheckboxes();
+    
+    // 단계별 완료도 체크
+    updateStageReflectionStatus(stage);
+}
+
+// 성찰 체크박스 상태 저장
+function saveReflectionCheckboxes() {
+    try {
+        if (CONFIG.DEMO_MODE && currentUser) {
+            const storageKey = `reflection_checkboxes_${currentUser.id}`;
+            localStorage.setItem(storageKey, JSON.stringify(reflectionCheckboxes));
+            console.log('성찰 체크박스 상태 저장 완료');
+        } else if (currentUser) {
+            // Supabase에 저장하는 로직은 나중에 구현
+            console.log('Supabase 성찰 데이터 저장 (미구현)');
+        }
+    } catch (error) {
+        console.error('성찰 체크박스 저장 오류:', error);
+    }
+}
+
+// 성찰 체크박스 상태 로드
+function loadReflectionCheckboxes() {
+    try {
+        if (CONFIG.DEMO_MODE && currentUser) {
+            const storageKey = `reflection_checkboxes_${currentUser.id}`;
+            const savedData = localStorage.getItem(storageKey);
+            
+            if (savedData) {
+                reflectionCheckboxes = JSON.parse(savedData);
+                console.log('성찰 체크박스 상태 로드 완료');
+                
+                // UI에 반영
+                restoreReflectionCheckboxes();
+            }
+        } else if (currentUser) {
+            // Supabase에서 로드하는 로직은 나중에 구현
+            console.log('Supabase 성찰 데이터 로드 (미구현)');
+        }
+    } catch (error) {
+        console.error('성찰 체크박스 로드 오류:', error);
+    }
+}
+
+// 성찰 체크박스 UI 복원
+function restoreReflectionCheckboxes() {
+    for (let stage = 1; stage <= 6; stage++) {
+        if (reflectionCheckboxes[stage]) {
+            for (let item = 1; item <= 3; item++) {
+                const checkbox = document.querySelector(
+                    `.reflection-checkbox[data-stage="${stage}"][data-item="${item}"]`
+                );
+                
+                if (checkbox && reflectionCheckboxes[stage][item]) {
+                    checkbox.checked = true;
+                }
+            }
+            
+            // 단계별 완료도 업데이트
+            updateStageReflectionStatus(stage);
+        }
+    }
+}
+
+// 단계별 성찰 완료도 업데이트
+function updateStageReflectionStatus(stage) {
+    if (!reflectionCheckboxes[stage]) return;
+    
+    const totalItems = 3; // 각 단계마다 3개 항목
+    const checkedItems = Object.values(reflectionCheckboxes[stage]).filter(checked => checked).length;
+    const completionRate = Math.round((checkedItems / totalItems) * 100);
+    
+    console.log(`${stage}단계 성찰 완료도: ${completionRate}% (${checkedItems}/${totalItems})`);
+    
+    // 성찰 섹션에 완료도 표시 (선택적)
+    const reflectionSection = document.querySelector(`#stage${stage} .reflection-section h3`);
+    if (reflectionSection) {
+        const statusText = completionRate === 100 ? ' ✅' : ` (${completionRate}%)`;
+        const baseText = reflectionSection.textContent.split(' ✅')[0].split(' (')[0];
+        reflectionSection.textContent = baseText + statusText;
+    }
+}
+
+// 모든 성찰 완료도 계산
+function getOverallReflectionCompletion() {
+    let totalChecked = 0;
+    let totalItems = 0;
+    
+    for (let stage = 1; stage <= 6; stage++) {
+        totalItems += 3; // 각 단계마다 3개 항목
+        
+        if (reflectionCheckboxes[stage]) {
+            totalChecked += Object.values(reflectionCheckboxes[stage]).filter(checked => checked).length;
+        }
+    }
+    
+    return Math.round((totalChecked / totalItems) * 100);
+}
+
+// ===== 탐구 설정 관련 함수들 =====
+
+// 탐구 설정 이벤트 리스너 설정
+function setupInquirySetupListeners() {
+    console.log('탐구 설정 이벤트 리스너 설정 시작');
+    
+    // 탐구 형태 라디오 버튼 이벤트
+    const inquiryTypeRadios = document.querySelectorAll('input[name="inquiryType"]');
+    inquiryTypeRadios.forEach(radio => {
+        radio.addEventListener('change', handleInquiryTypeChange);
+    });
+    
+    console.log('탐구 설정 이벤트 리스너 설정 완료');
+}
+
+// 탐구 형태 변경 처리
+function handleInquiryTypeChange(event) {
+    const selectedType = event.target.value;
+    const groupMembersSection = document.getElementById('groupMembersSection');
+    
+    if (selectedType === 'group') {
+        groupMembersSection.style.display = 'block';
+    } else {
+        groupMembersSection.style.display = 'none';
+        document.getElementById('groupMembers').value = '';
+    }
+    
+    inquirySettings.type = selectedType;
+    console.log('탐구 형태 변경:', selectedType);
+}
+
+// 탐구 설정 완료
+function completeInquirySetup() {
+    console.log('탐구 설정 완료 시작');
+    
+    // 입력값 가져오기
+    const topicInput = document.getElementById('inquiryTopic');
+    const intentInput = document.getElementById('inquiryIntent');
+    const groupMembersInput = document.getElementById('groupMembers');
+    
+    const topic = topicInput.value.trim();
+    const intent = intentInput.value.trim();
+    const groupMembers = groupMembersInput.value.trim();
+    
+    // 유효성 검사
+    if (!topic) {
+        showError('탐구 주제를 입력해주세요.');
+        topicInput.focus();
+        return;
+    }
+    
+    if (!intent) {
+        showError('탐구 의도를 입력해주세요.');
+        intentInput.focus();
+        return;
+    }
+    
+    if (inquirySettings.type === 'group' && !groupMembers) {
+        showError('모둠 구성원을 입력해주세요.');
+        groupMembersInput.focus();
+        return;
+    }
+    
+    // 설정 저장
+    inquirySettings.topic = topic;
+    inquirySettings.intent = intent;
+    inquirySettings.groupMembers = groupMembers;
+    
+    // 전역 변수에도 저장 (기존 코드와의 호환성)
+    inquiryTopic = topic;
+    initialIntent = intent;
+    
+    // UI 업데이트
+    updateInquiryDisplay();
+    
+    // 탐구 설정 단계 숨기고 1단계 표시
+    document.getElementById('inquirySetup').classList.remove('active');
+    document.getElementById('stage1').classList.add('active');
+    
+    // 현재 단계를 1로 설정하고 네비게이션 업데이트
+    currentStage = 1;
+    updateNavigation();
+    
+    // 진행 상황 저장
+    saveInquirySettings();
+    
+    showSuccess('탐구 설정이 완료되었습니다! 1단계를 시작해보세요.');
+    console.log('탐구 설정 완료:', inquirySettings);
+}
+
+// 탐구 정보 표시 업데이트
+function updateInquiryDisplay() {
+    const topicDisplay = document.getElementById('topicDisplay');
+    const intentDisplay = document.getElementById('intentDisplay');
+    
+    if (topicDisplay && inquirySettings.topic) {
+        topicDisplay.textContent = inquirySettings.topic;
+    }
+    
+    if (intentDisplay && inquirySettings.intent) {
+        intentDisplay.textContent = inquirySettings.intent;
+    }
+    
+    // 의도 일치도 초기화
+    updateIntentMatch(0);
+}
+
+// 탐구 설정 저장
+function saveInquirySettings() {
+    try {
+        if (CONFIG.DEMO_MODE && currentUser) {
+            const storageKey = `inquiry_settings_${currentUser.id}`;
+            localStorage.setItem(storageKey, JSON.stringify(inquirySettings));
+            console.log('탐구 설정 저장 완료');
+        } else if (currentUser) {
+            // Supabase에 저장하는 로직은 나중에 구현
+            console.log('Supabase 탐구 설정 저장 (미구현)');
+        }
+    } catch (error) {
+        console.error('탐구 설정 저장 오류:', error);
+    }
+}
+
+// 탐구 설정 로드
+function loadInquirySettings() {
+    try {
+        if (CONFIG.DEMO_MODE && currentUser) {
+            const storageKey = `inquiry_settings_${currentUser.id}`;
+            const savedData = localStorage.getItem(storageKey);
+            
+            if (savedData) {
+                inquirySettings = JSON.parse(savedData);
+                console.log('탐구 설정 로드 완료:', inquirySettings);
+                
+                // 전역 변수에도 설정
+                inquiryTopic = inquirySettings.topic;
+                initialIntent = inquirySettings.intent;
+                
+                // UI에 반영
+                restoreInquirySettings();
+                updateInquiryDisplay();
+                
+                // 설정이 완료된 경우 1단계로 이동
+                if (inquirySettings.topic && inquirySettings.intent) {
+                    console.log('탐구 설정이 완료되어 1단계로 이동');
+                    document.getElementById('inquirySetup').classList.remove('active');
+                    document.getElementById('stage1').classList.add('active');
+                    currentStage = 1;
+                    updateNavigation();
+                    return true; // 설정 완료됨을 반환
+                }
+            }
+            
+            // 저장된 설정이 없거나 불완전한 경우 탐구 설정 단계 표시
+            console.log('탐구 설정이 없어 탐구 설정 단계를 표시합니다.');
+            document.getElementById('inquirySetup').classList.add('active');
+            document.getElementById('stage1').classList.remove('active');
+            updateNavigation('setup');
+            return false; // 설정 미완료를 반환
+            
+        } else if (currentUser) {
+            // Supabase에서 로드하는 로직은 나중에 구현
+            console.log('Supabase 탐구 설정 로드 (미구현)');
+            // 임시로 탐구 설정 단계 표시
+            document.getElementById('inquirySetup').classList.add('active');
+            document.getElementById('stage1').classList.remove('active');
+            updateNavigation('setup');
+            return false;
+        }
+    } catch (error) {
+        console.error('탐구 설정 로드 오류:', error);
+        // 오류 발생 시에도 탐구 설정 단계 표시
+        document.getElementById('inquirySetup').classList.add('active');
+        document.getElementById('stage1').classList.remove('active');
+        updateNavigation('setup');
+        return false;
+    }
+    
+    return false;
+}
+
+// 탐구 설정 UI 복원
+function restoreInquirySettings() {
+    // 탐구 형태 복원
+    const typeRadio = document.querySelector(`input[name="inquiryType"][value="${inquirySettings.type}"]`);
+    if (typeRadio) {
+        typeRadio.checked = true;
+        handleInquiryTypeChange({ target: typeRadio });
+    }
+    
+    // 입력값 복원
+    const topicInput = document.getElementById('inquiryTopic');
+    const intentInput = document.getElementById('inquiryIntent');
+    const groupMembersInput = document.getElementById('groupMembers');
+    
+    if (topicInput) topicInput.value = inquirySettings.topic || '';
+    if (intentInput) intentInput.value = inquirySettings.intent || '';
+    if (groupMembersInput) groupMembersInput.value = inquirySettings.groupMembers || '';
+}
+
+// 후속 탐구 활용 방안 표시
+function showStageFollowUp(stage) {
+    const followUpContent = document.getElementById(`stageFollowUp${stage}`);
+    const button = document.querySelector(`button[onclick="showStageFollowUp(${stage})"]`);
+    
+    if (followUpContent && button) {
+        if (followUpContent.style.display === 'none') {
+            generateStageFollowUp(stage); // 내용 생성
+            followUpContent.style.display = 'block';
+            button.textContent = '🔼 후속 탐구 활용 방안 및 추가 자료 숨기기';
+        } else {
+            followUpContent.style.display = 'none';
+            button.textContent = '💡 후속 탐구 활용 방안 및 추가 자료 보기';
+        }
+    }
+}
+
+// 단계별 후속 방안 생성
+function generateStageFollowUp(stage) {
+    const userText = document.getElementById(`stage${stage}Input`)?.value || '';
+    const hasImage = stageImages[stage] ? true : false;
+    
+    // 후속 제안 생성
+    const followUpSuggestions = getStageFollowUpSuggestions(stage, userText, hasImage);
+    document.getElementById(`followUpSuggestions${stage}`).innerHTML = followUpSuggestions;
+    
+    // 추가 자료 생성
+    const additionalResources = generateStageAdditionalResources(stage, userText, inquiryTopic);
+    document.getElementById(`additionalResources${stage}`).innerHTML = additionalResources;
+}
+
+// 단계별 후속 제안
+function getStageFollowUpSuggestions(stage, userText, hasImage) {
+    const suggestions = {
+        1: `
+            <ul>
+                <li>관심 있는 주제를 더 구체적으로 세분화해보세요</li>
+                <li>주변 사람들에게 같은 주제에 대한 생각을 물어보세요</li>
+                <li>관련 책이나 자료를 찾아 기초 지식을 쌓아보세요</li>
+                <li>실제로 관찰할 수 있는 현상인지 확인해보세요</li>
+            </ul>
+        `,
+        2: `
+            <ul>
+                <li>질문을 더 구체적이고 측정 가능하게 만들어보세요</li>
+                <li>가설을 세워보고 예상되는 결과를 적어보세요</li>
+                <li>어떤 방법으로 답을 찾을지 계획을 세워보세요</li>
+                <li>필요한 도구나 재료를 미리 준비해보세요</li>
+            </ul>
+        `,
+        3: `
+            <ul>
+                <li>다양한 출처에서 정보를 수집해보세요</li>
+                <li>직접 실험이나 관찰을 해보세요</li>
+                <li>전문가나 선생님께 조언을 구해보세요</li>
+                <li>수집한 자료를 체계적으로 정리해보세요</li>
+            </ul>
+        `,
+        4: `
+            <ul>
+                <li>수집한 데이터를 표나 그래프로 정리해보세요</li>
+                <li>패턴이나 규칙성을 찾아보세요</li>
+                <li>예상했던 결과와 실제 결과를 비교해보세요</li>
+                <li>의외의 발견이나 예외 상황을 분석해보세요</li>
+            </ul>
+        `,
+        5: `
+            <ul>
+                <li>발견한 원리가 다른 상황에도 적용되는지 확인해보세요</li>
+                <li>비슷한 현상들과 연결지어 생각해보세요</li>
+                <li>일반적인 법칙이나 원리로 정리해보세요</li>
+                <li>다른 사람들과 토론하며 생각을 발전시켜보세요</li>
+            </ul>
+        `,
+        6: `
+            <ul>
+                <li>학습한 내용을 실생활 문제 해결에 적용해보세요</li>
+                <li>다른 교과목이나 분야와 연결해보세요</li>
+                <li>새로운 상황에서 어떻게 활용할지 계획해보세요</li>
+                <li>배운 내용을 다른 사람에게 설명해보세요</li>
+            </ul>
+        `
+    };
+    
+    return suggestions[stage] || '<p>이 단계에서 학습한 내용을 바탕으로 다음 활동을 계획해보세요.</p>';
+}
+
+// 추가 자료 제안 생성
+function generateStageAdditionalResources(stage, userText, topic) {
+    const baseResources = `
+        <div class="resource-links">
+            <a href="https://www.google.com/search?q=${encodeURIComponent(topic + ' 뉴스')}" target="_blank" class="resource-link">📰 관련 뉴스 검색</a>
+            <a href="https://www.google.com/search?q=${encodeURIComponent(topic + ' 교육자료')}" target="_blank" class="resource-link">📚 교육 자료 검색</a>
+            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(topic)}" target="_blank" class="resource-link">🎥 관련 동영상 검색</a>
+            <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(topic)}" target="_blank" class="resource-link">🔬 학술 자료 검색</a>
+        </div>
+    `;
+    
+    return baseResources;
 } 
