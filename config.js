@@ -6,7 +6,7 @@ const CONFIG = {
     SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpeXBjcWZ6ZHRtY3Bkcm14emx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjQyNzEsImV4cCI6MjA2NjYwMDI3MX0.BpG75MTBGaWXTz5fP_-4d_xzWfPdIe_8579cRfNUli0',
     
     // 데모 모드 설정 (Supabase 연동)
-    DEMO_MODE: false,
+    DEMO_MODE: true, // 변수 중복 오류 해결까지 임시 활성화
     
     // 교사용 설정
     TEACHER: {
@@ -21,7 +21,7 @@ const CONFIG = {
     
     // AI 탐구 코치 설정
     AI_COACH: {
-        GEMINI_API_KEY: 'AIzaSyAdcD_Q6oGohDQ7HfToeWrd6n4R-kwUKGQ',
+        GEMINI_API_KEY: 'AIzaSyBMYsUtKWZO2wDNzSFtCjp34oMo0Jp4Fvo',
         MODEL: 'gemini-1.5-flash',
         MAX_TOKENS: 500,
         TEMPERATURE: 0.7,
@@ -61,7 +61,7 @@ const CONFIG = {
     // 앱 설정
     APP_SETTINGS: {
         STAGE_MAX_SCORES: {
-            1: 10, 2: 15, 3: 20, 4: 15, 5: 10, 6: 20
+            1: 10, 2: 15, 3: 20, 4: 20, 5: 15, 6: 20
         },
         REFLECTION_BONUS: 3,
         AUTO_SAVE_INTERVAL: 30000,

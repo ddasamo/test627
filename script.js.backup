@@ -1,0 +1,651 @@
+            if (wordCount < 50) {
+                score -= 15;
+                improvements.push('조사 내용을 더 상세히 기록 필요');
+            }
+            break;
+            
+        case 4: // 조직 및 정리하기
+            if (content.includes('분류') || content.includes('정리') || content.includes('구조')) {
+                score += 15;
+                strengths.push('체계적인 정보 정리');
+            }
+            if (content.includes('관계') || content.includes('패턴') || content.includes('연결')) {
+                score += 10;
+                strengths.push('정보 간 관계 분석');
+            }
+            if (sentenceCount < 3) {
+                score -= 10;
+                improvements.push('더 체계적인 구조화 필요');
+            }
+            break;
+            
+        case 5: // 일반화하기
+            if (content.includes('원리') || content.includes('법칙') || content.includes('일반적')) {
+                score += 15;
+                strengths.push('일반적 원리 도출');
+            }
+            if (content.includes('적용') || content.includes('확장') || content.includes('활용')) {
+                score += 10;
+                strengths.push('확장 적용 가능성 제시');
+            }
+            if (wordCount < 30) {
+                score -= 15;
+                improvements.push('일반화 과정을 더 구체적으로 설명 필요');
+            }
+            break;
+            
+        case 6: // 전이하기
+            if (content.includes('실생활') || content.includes('적용') || content.includes('활용')) {
+                score += 15;
+                strengths.push('실생활 연관성 제시');
+            }
+            if (content.includes('새로운') || content.includes('창의적') || content.includes('다른')) {
+                score += 10;
+                strengths.push('창의적 적용 시도');
+            }
+            if (!content.includes('적용') && !content.includes('활용')) {
+                score -= 15;
+                improvements.push('구체적인 적용 방안 제시 필요');
+            }
+            break;
+    }
+
+    // 점수 범위 조정
+    score = Math.max(0, Math.min(100, score));
+
+    // 레벨 결정
+    if (score >= 85) {
+        level = '상';
+        feedback = `${criteria.상.description} 수준의 우수한 답변입니다.`;
+    } else if (score >= 65) {
+        level = '중';
+        feedback = `${criteria.중.description} 수준의 양호한 답변입니다.`;
+    } else {
+        level = '하';
+        feedback = `${criteria.하.description} 수준으로 보완이 필요합니다.`;
+    }
+
+    if (strengths.length === 0) {
+        strengths.push('성실하게 작성하려는 노력이 보입니다.');
+    }
+    
+    if (improvements.length === 0) {
+        improvements.push('더 구체적이고 자세한 설명을 추가해보세요.');
+    }
+
+    return { score, level, strengths, improvements, feedback };
+}
+
+// 실시간 의도 일치도 계산 (텍스트 기반)
+function calculateRealTimeIntentMatch() {
+    if (!initialIntent) return 0;
+    
+    let totalMatch = 0;
+    let completedStages = 0;
+    
+    // 완료된 각 단계의 입력 내용과 초기 의도 비교
+    for (let stage = 1; stage <= 6; stage++) {
+        const inputElement = document.getElementById(`stage${stage}Input`);
+        if (inputElement && inputElement.value.trim()) {
+            const stageMatch = calculateTextSimilarity(initialIntent, inputElement.value.trim());
+            totalMatch += stageMatch;
+            completedStages++;
+        }
+    }
+    
+    if (completedStages === 0) return 0;
+    
+    return Math.round(totalMatch / completedStages);
+}
+
+// 텍스트 유사도 계산 (개선된 알고리즘)
+function calculateTextSimilarity(intent, input) {
+    if (!intent || !input) return 0;
+    
+    // 무의미한 입력 검증 추가
+    const trimmedInput = input.trim();
+    const isOnlyNumbers = /^\d+$/.test(trimmedInput);
+    const isRepeatedChars = /^(.)\1{2,}$/.test(trimmedInput);
+    const isMeaningless = trimmedInput.length < 5 || 
+                         /^[^가-힣a-zA-Z]*$/.test(trimmedInput) ||
+                         ['test', 'ㅁㄴㅇㄹ', 'asdf', 'qwer', '123', '1234', 'abc'].includes(trimmedInput.toLowerCase());
+    
+    if (isOnlyNumbers || isRepeatedChars || isMeaningless) {
+        console.log('⚠️ 무의미한 입력으로 낮은 유사도 반환:', trimmedInput);
+        return 15; // 매우 낮은 점수 반환
+    }
+    
+    // 1. 키워드 매칭 (40%)
+    const intentKeywords = extractKeywords(intent);
+    const inputKeywords = extractKeywords(input);
+    
+    let keywordMatches = 0;
+    intentKeywords.forEach(keyword => {
+        if (inputKeywords.some(inputKeyword => 
+            inputKeyword.includes(keyword) || keyword.includes(inputKeyword) ||
+            getSimilarity(keyword, inputKeyword) > 0.7
+        )) {
+            keywordMatches++;
+        }
+    });
+    
+    const keywordScore = intentKeywords.length > 0 ? 
+        (keywordMatches / intentKeywords.length) * 40 : 0;
+    
+    // 2. 의미적 연관성 (40%)
+    const semanticScore = calculateSemanticSimilarity(intent, input) * 40;
+    
+    // 3. 길이 및 구조 유사도 (20%)
+    const structureScore = calculateStructureSimilarity(intent, input) * 20;
+    
+    return Math.min(100, keywordScore + semanticScore + structureScore);
+}
+
+// 키워드 추출 (불용어 제거)
+function extractKeywords(text) {
+    const stopWords = ['은', '는', '이', '가', '을', '를', '에', '에서', '와', '과', '의', '로', '으로', '한', '하는', '하다', '있다', '없다', '그', '저', '이런', '저런', '등'];
+    
+    // 무의미한 입력 체크
+    const trimmedText = text.trim();
+    if (/^\d+$/.test(trimmedText) || trimmedText.length < 3) {
+        return []; // 빈 배열 반환으로 키워드 매칭 실패
+    }
+    
+    return text.toLowerCase()
+        .replace(/[^\w\s가-힣]/g, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 1 && !stopWords.includes(word) && !/^\d+$/.test(word))
+        .slice(0, 10); // 상위 10개 키워드만 사용
+}
+
+// 문자열 유사도 계산 (편집 거리 기반)
+function getSimilarity(str1, str2) {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    const editDistance = getEditDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+}
+
+// 편집 거리 계산
+function getEditDistance(str1, str2) {
+    const matrix = Array(str2.length + 1).fill().map(() => Array(str1.length + 1).fill(0));
+    
+    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+    
+    for (let j = 1; j <= str2.length; j++) {
+        for (let i = 1; i <= str1.length; i++) {
+            if (str1[i - 1] === str2[j - 1]) {
+                matrix[j][i] = matrix[j - 1][i - 1];
+            } else {
+                matrix[j][i] = Math.min(
+                    matrix[j - 1][i - 1] + 1,
+                    matrix[j][i - 1] + 1,
+                    matrix[j - 1][i] + 1
+                );
+            }
+        }
+    }
+    
+    return matrix[str2.length][str1.length];
+}
+
+// 의미적 유사도 계산 (간단한 휴리스틱)
+function calculateSemanticSimilarity(intent, input) {
+    // 주제 관련 키워드 그룹
+    const topicGroups = [
+        ['과학', '실험', '관찰', '분석', '연구', '조사'],
+        ['역사', '문화', '사회', '인물', '시대', '배경'],
+        ['문학', '작품', '작가', '시', '소설', '표현'],
+        ['수학', '계산', '공식', '문제', '해결', '논리'],
+        ['예술', '음악', '미술', '창작', '표현', '감상']
+    ];
+    
+    const intentTopics = getTopicMatch(intent, topicGroups);
+    const inputTopics = getTopicMatch(input, topicGroups);
+    
+    let commonTopics = 0;
+    intentTopics.forEach(topic => {
+        if (inputTopics.includes(topic)) commonTopics++;
+    });
+    
+    return intentTopics.length > 0 ? commonTopics / intentTopics.length : 0;
+}
+
+// 주제 매칭
+function getTopicMatch(text, topicGroups) {
+    const matches = [];
+    const lowerText = text.toLowerCase();
+    
+    topicGroups.forEach((group, index) => {
+        if (group.some(keyword => lowerText.includes(keyword))) {
+            matches.push(index);
+        }
+    });
+    
+    return matches;
+}
+
+// 구조적 유사도 계산
+function calculateStructureSimilarity(intent, input) {
+    const intentLength = intent.length;
+    const inputLength = input.length;
+    
+    // 길이 유사도
+    const lengthRatio = Math.min(intentLength, inputLength) / Math.max(intentLength, inputLength);
+    
+    // 문장 구조 유사도 (간단한 버전)
+    const intentSentences = intent.split(/[.!?]/);
+    const inputSentences = input.split(/[.!?]/);
+    
+    const sentenceRatio = Math.min(intentSentences.length, inputSentences.length) / 
+                         Math.max(intentSentences.length, inputSentences.length);
+    
+    return (lengthRatio + sentenceRatio) / 2;
+}
+
+// 실시간 의도 일치도 업데이트 (수정된 버전)
+function updateRealTimeIntentMatch() {
+    const intentMatchElement = document.getElementById('intentMatch');
+    
+    if (intentMatchElement) {
+        const realTimeMatch = calculateRealTimeIntentMatch();
+        intentMatchElement.textContent = `${realTimeMatch}%`;
+        
+        // 색상 업데이트
+        if (realTimeMatch >= 80) {
+            intentMatchElement.style.color = '#28a745'; // 녹색
+        } else if (realTimeMatch >= 60) {
+            intentMatchElement.style.color = '#ffc107'; // 노란색  
+        } else {
+            intentMatchElement.style.color = '#dc3545'; // 빨간색
+        }
+    }
+}
+
+// 최종 평가용 의도 일치도 (20% 반영)
+function calculateFinalIntentScore() {
+    if (!initialIntent) return 0;
+    
+    let totalIntentScore = 0;
+    let stageCount = 0;
+    
+    // 각 단계별 의도 연관성 점수 계산
+    for (let stage = 1; stage <= 6; stage++) {
+        const inputElement = document.getElementById(`stage${stage}Input`);
+        if (inputElement && inputElement.value.trim()) {
+            const stageIntentScore = calculateAdvancedIntentMatch(
+                initialIntent, 
+                inputElement.value.trim(), 
+                stage
+            );
+            totalIntentScore += stageIntentScore;
+            stageCount++;
+        }
+    }
+    
+    return stageCount > 0 ? Math.round(totalIntentScore / stageCount) : 0;
+}
+
+// 고급 의도 일치도 분석 (최종 평가용)
+function calculateAdvancedIntentMatch(intent, input, stage) {
+    // 단계별 가중치 적용
+    const stageWeights = {
+        1: 1.2, // 관계맺기 - 의도 설정의 기초
+        2: 1.3, // 집중하기 - 의도의 구체화
+        3: 1.0, // 조사하기 - 일반적 가중치
+        4: 1.0, // 조직 및 정리하기 - 일반적 가중치
+        5: 1.1, // 일반화하기 - 의도와의 연결성 중요
+        6: 1.2  // 전이하기 - 의도의 확장 적용
+    };
+    
+    const baseSimilarity = calculateTextSimilarity(intent, input);
+    const weightedScore = baseSimilarity * (stageWeights[stage] || 1.0);
+    
+    return Math.min(100, weightedScore);
+}
+
+// 최종 종합 점수 계산
+function calculateFinalScore(contentScore, reflectionScore) {
+    const intentScore = calculateFinalIntentScore();
+    
+    // 가중치 적용: 내용 70% + 의도 20% + 성찰 10%
+    const finalScore = Math.round(
+        (contentScore * 0.7) + 
+        (intentScore * 0.2) + 
+        (reflectionScore * 0.1)
+    );
+    
+    // 등급 계산
+    let grade;
+    if (finalScore >= 90) {
+        grade = '상';
+    } else if (finalScore >= 70) {
+        grade = '중';
+    } else {
+        grade = '하';
+    }
+    
+    return {
+        contentScore: Math.round(contentScore),
+        intentScore: Math.round(intentScore),
+        reflectionScore: Math.round(reflectionScore),
+        finalScore: finalScore,
+        grade: grade
+    };
+}
+
+// 입력 이벤트 리스너 추가 (실시간 업데이트)
+function addRealTimeIntentListeners() {
+    for (let stage = 1; stage <= 6; stage++) {
+        const inputElement = document.getElementById(`stage${stage}Input`);
+        if (inputElement) {
+            inputElement.addEventListener('input', debounce(updateRealTimeIntentMatch, 500));
+        }
+    }
+}
+
+// 디바운스 함수 (성능 최적화)
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// 평가 결과 표시 모달
+function showEvaluationResult(stageNumber, evaluation) {
+    console.log('📊 평가 결과 표시:', { stageNumber, evaluation });
+    
+    const stageNames = {
+        1: '관계맺기', 2: '집중하기', 3: '조사하기',
+        4: '조직 및 정리하기', 5: '일반화하기', 6: '전이하기'
+    };
+    
+    const stageName = stageNames[stageNumber];
+    const intentMatch = calculateRealTimeIntentMatch();
+    
+    console.log('🎯 의도 일치도:', intentMatch);
+    
+    const modalHTML = `
+        <div class="modal-overlay" id="evaluationModal">
+            <div class="modal-content evaluation-result">
+                <div class="evaluation-header">
+                    <h3>${stageName} 평가 결과</h3>
+                    <button class="close-btn" onclick="closeEvaluationModal()">&times;</button>
+                </div>
+                <div class="evaluation-body">
+                    <div class="score-display">
+                        <div class="score-box ${evaluation.level}">
+                            <div class="score-number">${evaluation.score}점</div>
+                            <div class="score-separator">:</div>
+                            <div class="score-label">${evaluation.level}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="evaluation-details">
+                        <div class="feedback-section">
+                            <h4>📝 평가 피드백</h4>
+                            <p>${evaluation.feedback}</p>
+                        </div>
+                        
+                        <div class="strengths-section">
+                            <h4>✅ 잘한 점</h4>
+                            <p>${evaluation.strengths.join(', ')}</p>
+                        </div>
+                        
+                        <div class="improvements-section">
+                            <h4>💡 개선할 점</h4>
+                            <p>${evaluation.improvements.join(', ')}</p>
+                        </div>
+                        
+                        <div class="intent-match-section">
+                            <h4>🎯 의도 일치도</h4>
+                            <div class="intent-match-bar">
+                                <div class="intent-match-fill" style="width: ${intentMatch}%"></div>
+                                <div class="intent-match-text">${intentMatch}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="evaluation-footer">
+                    <button class="btn btn-primary" onclick="closeEvaluationModal()">확인</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // 애니메이션 효과
+    setTimeout(() => {
+        document.getElementById('evaluationModal').classList.add('show');
+    }, 10);
+}
+
+// 평가 결과 모달 닫기
+function closeEvaluationModal() {
+    const modal = document.getElementById('evaluationModal');
+    if (modal) {
+        modal.classList.add('hiding');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+}
+
+// 성찰 참여도 계산
+function calculateReflectionScore() {
+    let totalReflections = 0;
+    let completedReflections = 0;
+    
+    // 각 단계별 성찰 체크박스 상태 확인
+    for (let stage = 1; stage <= 6; stage++) {
+        const checkboxes = document.querySelectorAll(`input[data-stage="${stage}"].reflection-checkbox`);
+        totalReflections += checkboxes.length;
+        
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                completedReflections++;
+            }
+        });
+    }
+    
+    return totalReflections > 0 ? Math.round((completedReflections / totalReflections) * 100) : 0;
+}
+
+// 전체 탐구 완료 시 최종 점수 계산 및 표시
+function showFinalScoreReport() {
+    // 내용 점수 계산 (각 단계 점수의 평균)
+    let totalContentScore = 0;
+    let completedStages = 0;
+    
+    for (let stage = 1; stage <= 6; stage++) {
+        if (stageScores[stage] > 0) {
+            totalContentScore += stageScores[stage];
+            completedStages++;
+        }
+    }
+    
+    const contentScore = completedStages > 0 ? Math.round(totalContentScore / completedStages) : 0;
+    const reflectionScore = calculateReflectionScore();
+    
+    // 최종 점수 계산 (내용 70% + 의도 20% + 성찰 10%)
+    const finalScoreData = calculateFinalScore(contentScore, reflectionScore);
+    
+    // 최종 점수 데이터 저장
+    window.finalScoreData = finalScoreData;
+    
+    console.log('최종 점수 계산 결과:', finalScoreData);
+    
+    // 완료 메시지와 함께 최종 점수 표시
+    showCompletionMessage(finalScoreData);
+}
+
+// 학생용 최종 결과 보고서 표시 (점수와 개선사항 포함)
+function showStudentFinalResult() {
+    // 내용 점수 계산
+    let totalContentScore = 0;
+    let completedStages = 0;
+    
+    for (let stage = 1; stage <= 6; stage++) {
+        if (stageScores[stage] > 0) {
+            totalContentScore += stageScores[stage];
+            completedStages++;
+        }
+    }
+    
+    const contentScore = completedStages > 0 ? Math.round(totalContentScore / completedStages) : 0;
+    const reflectionScore = calculateReflectionScore();
+    const finalScoreData = calculateFinalScore(contentScore, reflectionScore);
+    
+    // 학생용 종합 레포트 모달 생성
+    const modalHTML = `
+        <div class="modal-overlay" id="studentReportModal">
+            <div class="modal-content student-report-modal">
+                <div class="modal-header">
+                    <h2>📊 탐구 활동 종합 보고서</h2>
+                    <button class="modal-close" onclick="closeStudentReportModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="final-score-summary">
+                        <div class="score-display-large">
+                            <div class="final-score">${finalScoreData.finalScore}점</div>
+                            <div class="score-grade ${finalScoreData.grade}">${finalScoreData.grade}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="score-breakdown">
+                        <h3>점수 구성</h3>
+                        <div class="score-item">
+                            <span>탐구 내용 점수 (70%)</span>
+                            <span>${contentScore}점</span>
+                        </div>
+                        <div class="score-item">
+                            <span>의도 일치도 (20%)</span>
+                            <span>${finalScoreData.intentScore}점</span>
+                        </div>
+                        <div class="score-item">
+                            <span>성찰 점수 (10%)</span>
+                            <span>${reflectionScore}점</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stage-scores">
+                        <h3>단계별 점수</h3>
+                        ${generateStageScoreHTML()}
+                    </div>
+                    
+                    <div class="improvement-suggestions">
+                        <h3>개선 제안</h3>
+                        ${generateImprovementSuggestions(finalScoreData)}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="closeStudentReportModal()">닫기</button>
+                    <button class="btn-primary" onclick="startNewInquiry()">새 탐구 시작</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 모달을 body에 추가
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // 모달 표시
+    const modal = document.getElementById('studentReportModal');
+    if (modal) {
+        setTimeout(() => modal.classList.add('show'), 10);
+    }
+}
+
+// 전역 함수로 노출
+window.showStudentFinalResult = showStudentFinalResult;
+
+// 학생 레포트 모달 닫기
+function closeStudentReportModal() {
+    const modal = document.getElementById('studentReportModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+// 단계별 점수 HTML 생성
+function generateStageScoreHTML() {
+    let html = '<div class="stage-score-list">';
+    const stageNames = {
+        1: '관계맺기',
+        2: '집중하기', 
+        3: '조사하기',
+        4: '정리하기',
+        5: '일반화하기',
+        6: '전이하기'
+    };
+    
+    for (let stage = 1; stage <= 6; stage++) {
+        const score = stageScores[stage] || 0;
+        const evaluation = stageEvaluations[stage];
+        const level = evaluation ? evaluation.level : '미완료';
+        
+        html += `
+            <div class="stage-score-item">
+                <div class="stage-info">
+                    <span class="stage-name">${stage}단계: ${stageNames[stage]}</span>
+                    <div class="stage-score-display">
+                        <span class="score">${score}점</span>
+                        <span class="level ${level}">${level}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+// 개선 제안 생성
+function generateImprovementSuggestions(finalScoreData) {
+    const suggestions = [];
+    
+    if (finalScoreData.finalScore >= 90) {
+        suggestions.push('🎉 훌륭한 탐구 활동이었습니다! 깊이 있는 사고와 체계적인 접근이 돋보입니다.');
+        suggestions.push('💡 다른 주제에서도 이런 우수한 탐구 능력을 발휘해보세요.');
+    } else if (finalScoreData.finalScore >= 80) {
+        suggestions.push('👍 전반적으로 잘 수행된 탐구입니다.');
+        suggestions.push('📈 각 단계에서 더 구체적인 근거와 예시를 제시하면 더욱 향상될 것입니다.');
+    } else if (finalScoreData.finalScore >= 70) {
+        suggestions.push('📚 기본적인 탐구 과정은 잘 따라했습니다.');
+        suggestions.push('🔍 각 단계에서 더 깊이 있는 분석과 성찰이 필요합니다.');
+        suggestions.push('💭 자신의 생각을 더 구체적으로 표현해보세요.');
+    } else {
+        suggestions.push('📖 탐구의 기본 과정을 익히는 것부터 시작해보세요.');
+        suggestions.push('🤝 선생님이나 친구들과 함께 탐구 방법에 대해 토론해보세요.');
+        suggestions.push('⏰ 각 단계에 충분한 시간을 투자하여 깊이 있게 탐구해보세요.');
+    }
+    
+    // 특별 제안
+    if (finalScoreData.intentScore < 70) {
+        suggestions.push('🎯 탐구 주제와 의도를 더 명확히 하여 일관성 있는 탐구를 진행해보세요.');
+    }
+    
+    let html = '<ul class="suggestion-list">';
+    suggestions.forEach(suggestion => {
+        html += `<li>${suggestion}</li>`;
+    });
+    html += '</ul>';
+    
+    return html;
+}
+
+// 전역 함수로 노출
+window.closeStudentReportModal = closeStudentReportModal;

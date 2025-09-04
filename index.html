@@ -11,20 +11,9 @@
 <body>
     <!-- 대문 페이지 -->
     <div class="welcome-container" id="welcomeContainer">
-        <div class="welcome-content">
-            <div class="welcome-text">
-                <h1 class="welcome-title">의도기반 탐구학습 시스템</h1>
-                <p class="welcome-subtitle">호기심을 탐구로, 탐구를 지혜로</p>
-                <p class="welcome-description">
-                    체계적인 6단계 탐구 과정을 통해<br>
-                    스스로 질문하고, 조사하고, 발견하는<br>
-                    진정한 학습의 즐거움을 경험해보세요.
-                </p>
-                <button class="btn-start-inquiry" id="startInquiryBtn">
-                    🎯 탐구 시작하기
-                </button>
-            </div>
-        </div>
+        <button class="btn-start-inquiry" id="startInquiryBtn">
+            🎯 탐구 시작하기
+        </button>
     </div>
 
     <!-- 로그인/회원가입 화면 -->
@@ -145,6 +134,13 @@
         <div class="main-layout">
             <!-- 왼쪽 사이드바 (진행상황) -->
             <div class="sidebar">
+                <!-- 새 탐구 시작 버튼 -->
+                <div class="new-inquiry-section">
+                    <button class="btn-new-inquiry-sidebar" onclick="startNewInquiry()">
+                        🔄 새 탐구 시작
+                    </button>
+                </div>
+                
                 <div class="score-section" style="display: none;">
                     <div class="total-score">
                         <div class="score-number" id="totalScore">0점</div>
@@ -289,8 +285,8 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="stage1Input">🎯 탐구하고 싶은 주제나 궁금한 점을 적어보세요:</label>
-                            <textarea id="stage1Input" class="input-area" placeholder="예: 왜 식물은 빛을 향해 자랄까? 어떤 조건에서 식물이 더 잘 자랄까?"></textarea>
+                            <label for="stage1Input">🎯 이 주제에 대해 이미 알고 있는 것은 무엇인가요? 또는 관련된 경험이 있다면 이야기해주세요:</label>
+                            <textarea id="stage1Input" class="input-area" placeholder="예: 이 주제를 보면 어떤 생각이나 느낌이 드나요? 왜 그런 생각이 들었나요? 이전에 비슷한 경험이 있었나요?"></textarea>
                             <div class="text-feedback-actions">
                                 <button class="btn-text-feedback" onclick="getTextFeedback(1)">💡 텍스트 피드백 받기</button>
                             </div>
@@ -358,7 +354,7 @@
                     <div class="stage-content">
                         <div class="input-section">
                             <label for="stage2Input">🔍 구체적인 탐구 질문을 만들어보세요:</label>
-                            <textarea id="stage2Input" class="input-area" placeholder="예: 햇빛의 양에 따라 식물의 성장 속도가 어떻게 달라질까?"></textarea>
+                            <textarea id="stage2Input" class="input-area" placeholder="단순 사실 확인을 넘어, 핵심 개념 간의 관계나 원리를 파고드는 구체적이고 개방적인 질문을 제시하세요."></textarea>
                             <div class="text-feedback-actions">
                                 <button class="btn-text-feedback" onclick="getTextFeedback(2)">💡 텍스트 피드백 받기</button>
                             </div>
@@ -426,8 +422,8 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="stage3Input">📚 조사한 내용이나 실험/관찰 결과를 적어보세요:</label>
-                            <textarea id="stage3Input" class="input-area" placeholder="예: 인터넷에서 찾은 자료, 실험 결과, 관찰한 내용 등"></textarea>
+                            <label for="stage3Input">📚 탐구 질문에 대한 답을 찾기 위해 어떤 방법(자료 조사, 실험, 인터뷰 등)을 사용했나요?</label>
+                            <textarea id="stage3Input" class="input-area" placeholder="조사를 통해 새롭게 알게 된 사실이나 데이터를 구체적으로 기록해주세요.(출처 명시)"></textarea>
                             <div class="text-feedback-actions">
                                 <button class="btn-text-feedback" onclick="getTextFeedback(3)">💡 텍스트 피드백 받기</button>
                             </div>
@@ -495,8 +491,8 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="stage4Input">📊 조사한 내용을 정리하고 분석한 결과를 적어보세요:</label>
-                            <textarea id="stage4Input" class="input-area" placeholder="예: 데이터 분석 결과, 패턴 발견, 중요한 발견사항 등"></textarea>
+                            <label for="stage4Input">📊 수집한 정보들을 어떻게 분류하고 정리했나요?</label>
+                            <textarea id="stage4Input" class="input-area" placeholder="정보들 간의 관계(공통점, 차이점, 연결점)를 파악하고, 체계적으로 정리한 내용을 서술해주세요."></textarea>
                             <div class="text-feedback-actions">
                                 <button class="btn-text-feedback" onclick="getTextFeedback(4)">💡 텍스트 피드백 받기</button>
                             </div>
@@ -564,8 +560,8 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="stage5Input">🧠 탐구 결과를 바탕으로 일반화한 내용을 적어보세요:</label>
-                            <textarea id="stage5Input" class="input-area" placeholder="예: 발견한 법칙이나 원리, 결론 등"></textarea>
+                            <label for="stage5Input">🧠 탐구를 통해 발견한 일반적인 원리나 법칙은 무엇인가요?</label>
+                            <textarea id="stage5Input" class="input-area" placeholder="이 결과를 다른 상황이나 사례에도 적용할 수 있을까요? 어떻게 적용할 수 있는지 구체적으로 설명해주세요."></textarea>
                             <div class="text-feedback-actions">
                                 <button class="btn-text-feedback" onclick="getTextFeedback(5)">💡 텍스트 피드백 받기</button>
                             </div>
@@ -633,8 +629,8 @@
                     </div>
                     <div class="stage-content">
                         <div class="input-section">
-                            <label for="stage6Input">🔄 배운 내용을 다른 상황에 어떻게 적용할 수 있는지 적어보세요:</label>
-                            <textarea id="stage6Input" class="input-area" placeholder="예: 실생활 적용 방법, 다른 분야와의 연결점 등"></textarea>
+                            <label for="stage6Input">🔄 이번 탐구에서 얻은 지식이나 경험을 실생활의 어떤 문제 해결에 활용할 수 있을까요?</label>
+                            <textarea id="stage6Input" class="input-area" placeholder="구체적인 실생활 적용 사례를 제시하고, 어떻게 창의적으로 활용할 수 있는지 설명해주세요."></textarea>
                             <div class="text-feedback-actions">
                                 <button class="btn-text-feedback" onclick="getTextFeedback(6)">💡 텍스트 피드백 받기</button>
                             </div>
@@ -690,6 +686,20 @@
                         <div class="stage-actions">
                             <button class="btn-secondary" data-stage="prev">이전</button>
                             <button class="btn-primary" data-stage="6">탐구 완료</button>
+                        </div>
+                        
+                        <!-- 탐구 완료 후 결과 보기 섹션 -->
+                        <div class="result-report-section" id="stage6ResultSection" style="display: none;">
+                            <div class="completion-message">
+                                <h3>🎉 탐구 활동 완료!</h3>
+                                <p>6단계 탐구 과정을 성공적으로 완주했습니다.<br>
+                                이제 여러분의 탐구 결과를 자세히 확인해보세요!</p>
+                            </div>
+                            <div class="result-actions">
+                                <button class="btn-result-report" onclick="showStudentFinalResult()">
+                                    📊 결과 보고서 보기
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
